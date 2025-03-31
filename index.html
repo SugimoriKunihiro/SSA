@@ -104,22 +104,59 @@
       <button type="button" class="close" @click="alreadyOpened = true">&times;</button>
       <h5>AppSheetアプリについて</h5>
       <p>表示に問題がある場合は、下記の「新しいタブで開く」ボタンをクリックしてください。</p>
-      <button @click="openAppsheetFallback" class="btn btn-primary btn-sm">
+      <button @click="openAppsheetInNewTab" class="btn btn-primary btn-sm">
         新しいタブで開く
       </button>
     </div>
   </div>
 
-  <!-- エラー時のAppSheetボタン表示 -->
-  <div v-if="iframeError" class="d-flex flex-column align-items-center my-3">
-    <div class="alert alert-warning mb-3" role="alert">
-      <strong>AppSheetアプリの表示に問題が発生しています</strong>
-      <p>ブラウザのプライバシー設定により、埋め込みアプリにアクセスできない場合があります。</p>
+  <!-- エラー時の強化されたAppSheetリカバリーUI -->
+  <div v-if="iframeError" class="d-flex flex-column align-items-center my-4 p-3 bg-light rounded">
+    <div class="alert alert-danger mb-3 w-100" role="alert">
+      <h4 class="alert-heading">
+        <span class="mr-2">⚠️</span> 
+        AppSheetアプリの表示に問題が発生しています
+      </h4>
+      <p>サーバーへの接続が拒否されました。これには以下のような原因が考えられます：</p>
+      <ul>
+        <li>ネットワーク接続の問題（企業ネットワークの制限など）</li>
+        <li>AppSheetサービスへのアクセス権限の問題</li>
+        <li>ブラウザの認証情報やCookieの問題</li>
+      </ul>
     </div>
-    <button @click="openAppsheetFallback" class="btn btn-warning btn-lg mb-2">
-      AppSheetアプリを新しいタブで開く
+    
+    <div class="d-flex flex-column flex-md-row mb-3 w-100 justify-content-center">
+      <button @click="openAppsheetFallback" class="btn btn-primary btn-lg m-2">
+        <span class="mr-2">🔗</span> 
+        AppSheetを新しいタブで開く
+      </button>
+      
+      <button @click="troubleshootAppSheet" class="btn btn-outline-secondary btn-lg m-2">
+        <span class="mr-2">🔧</span>
+        トラブルシューティング
+      </button>
+    </div>
+    
+    <small class="text-muted mb-2">※ ブラウザのポップアップブロックを許可してください</small>
+    
+    <div class="card w-100 mt-3">
+      <div class="card-header bg-info text-white">
+        さらに詳しい解決方法
+      </div>
+      <div class="card-body">
+        <ol>
+          <li>Google アカウントに直接ログインしていることを確認してください</li>
+          <li>ブラウザのシークレットモードや別のブラウザで試してみてください</li>
+          <li>ブラウザのキャッシュとCookieをクリアしてから再試行してください</li>
+          <li>企業ネットワークを使用している場合は、個人回線で試してみてください</li>
+          <li>直接 <a href="https://www.appsheet.com" target="_blank">AppSheet</a> にアクセスしてログインした後、このポータルに戻ってきてください</li>
+        </ol>
+      </div>
+    </div>
+    
+    <button @click="resetAppSheetError" class="btn btn-link mt-3">
+      エラー表示を閉じる
     </button>
-    <small class="text-muted">※ ブラウザのポップアップブロックを許可してください</small>
   </div>
 
   <!-- ホバーゾーンとナビ -->
@@ -323,7 +360,8 @@ var app = new Vue({
     isHovering: false,
     showNav: true,
     iframeError: false,
-    alreadyOpened: false
+    alreadyOpened: false,
+    errorDetails: null
   },
   watch: {
     showNav(newVal) {
@@ -348,14 +386,15 @@ var app = new Vue({
       this.showContents = [data];
       this.alreadyOpened = false;
       this.iframeError = false; // エラー状態をリセット
+      this.errorDetails = null;
     },
     toggle2: function(data) {
       this.showContents2 = [data];
     },
     handleIframeLoad() {
-      // AppSheet関連のロジックを追加
+      // AppSheet関連の場合
       if (this.showContents[0] === '99999') {
-        // iframe内容へのアクセスを試みる（少し遅延させる）
+        // 少し遅延させて初回チェック
         setTimeout(() => {
           this.checkForAppSheetErrors();
         }, 300);
@@ -373,10 +412,23 @@ var app = new Vue({
         const iframe = this.$refs.fullscreenFrame;
         if (!iframe) return;
         
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        // 1. ドキュメントにアクセスを試みる
+        let iframeDoc;
+        try {
+          iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        } catch (e) {
+          // クロスオリジンエラーならばエラーフラグを立てる
+          this.iframeError = true;
+          console.warn("クロスオリジンポリシーによりiframeへのアクセスができません", e);
+          return;
+        }
+        
+        if (!iframeDoc) return;
+        
+        // 2. iframe内の要素から状態を確認
         const text = iframeDoc.body.innerText || '';
         
-        // エラーパターンを検出（様々なエラーメッセージに対応）
+        // 3. エラーパターンを拡張
         const errorPatterns = [
           "requestStorageAccess",
           "Error obtaining storage access",
@@ -384,27 +436,69 @@ var app = new Vue({
           "Sign into AppSheet",
           "Why am I seeing this?",
           "denied",
-          "access"
+          "access",
+          "拒否",
+          "接続",
+          "error",
+          "refused",
+          "connection",
+          "blocked",
+          "ブロック"
         ];
         
-        const hasError = errorPatterns.some(pattern => text.toLowerCase().includes(pattern.toLowerCase()));
+        const hasError = errorPatterns.some(pattern => 
+          text.toLowerCase().includes(pattern.toLowerCase()));
         
-        if (hasError && !this.alreadyOpened) {
+        // 4. 見た目のチェックも追加
+        const hasErrorIcon = iframeDoc.querySelector('.error-icon') || 
+                            iframeDoc.querySelector('[data-error]') ||
+                            iframeDoc.body.innerHTML.includes('face_with_raised_eyebrow');
+        
+        if ((hasError || hasErrorIcon) && !this.alreadyOpened) {
           this.iframeError = true;
-          // 自動で新しいタブを開く機能は無効化（ユーザーが明示的にボタンをクリック）
-          // this.openAppsheetFallback();
+          this.errorDetails = {
+            type: 'connection_refused',
+            message: 'AppSheetとの接続が拒否されました。新しいタブで直接開いてください。'
+          };
         }
       } catch (e) {
-        // クロスオリジン制限などのエラー
+        // すべての例外をキャッチ
         this.iframeError = true;
-        console.warn("iframe cross-origin issue", e);
+        console.warn("AppSheetの読み込みに問題が発生しました", e);
       }
     },
     
+    // エラー状態をリセットする関数
+    resetAppSheetError() {
+      this.iframeError = false;
+      this.errorDetails = null;
+    },
+    
+    // 明示的に新しいタブで開く機能
+    openAppsheetInNewTab() {
+      const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
+      window.open(appsheetUrl, '_blank');
+      this.alreadyOpened = true;
+    },
+    
+    // AppSheetのフォールバック機能（バックアップ用）
     openAppsheetFallback() {
       const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
       window.open(appsheetUrl, '_blank');
       this.alreadyOpened = true;
+    },
+    
+    // 問題解決のためのトラブルシューティングステップ
+    troubleshootAppSheet() {
+      const steps = [
+        "1. ブラウザキャッシュとCookieをクリアします",
+        "2. 別のブラウザで試してみます",
+        "3. 企業ネットワークではなく、個人の回線で試してみます",
+        "4. Google アカウントに直接ログインしてから再試行します",
+        "5. AppSheetに直接アクセスしてからポータルに戻ります"
+      ];
+      
+      alert(steps.join("\n"));
     }
   },
 });
