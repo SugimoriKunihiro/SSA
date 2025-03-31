@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"    
+      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" 
+      integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
+      integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+
+    <style>
+      html, body, #app {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      #fullscreen-appsheet {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+      }
+
+      #fullscreen-appsheet iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+
+      #nav-hover-zone {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 30px;
+        width: 100vw;
+        background: transparent;
+        z-index: 100;
+        pointer-events: auto;
+      }
+
+      #nav-hover-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 40px;
+        background-color: #343a40;
+        color: white;
+        z-index: 101;
+        transform: translateY(-100%);
+        transition: transform 0.4s ease-in-out;
+        pointer-events: auto;
+      }
+
+      #nav-hover-bar.active {
+        transform: translateY(0%);
+      }
+    </style>
+  </head>
+
+  <body class="bg-dark">
+  <div id="app"><!--appここから-->
+
+  <!-- iframe全画面 -->
+  <div id="fullscreen-appsheet" v-show="showContents[0] === '99999'">
+    <iframe
+      src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
+      ref="fullscreenFrame"
+      :style="{
+        width: '100%',
+        height: '100%',
+        border: 'none',
+        pointerEvents: showNav ? 'none' : 'auto'
+      }"
+      scrolling="no"
+      allowfullscreen>
+    </iframe>
+  </div>
+
+  <!-- ホバーゾーンとナビ -->
+    <div id="nav-hover-zone" v-show="showContents[0] !== '99999'" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
+    <nav 
+      id="nav-hover-bar"
+      class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
+      :class="{ active: showNav }"
+      @mouseenter="showNav = true"
+      @mouseleave="showNav = false">
+      <h3 class="navbar-brand" @click="toggle('99999')">FFR41MR</h3>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+          aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      
+      <!--ドロップダウンリストここから-->
+      <div class="collapse navbar-collapse" id="navbarNavDropdown">
+        <ul class="navbar-nav">
+ 
+         <!--カテゴリ毎ドロップダウンここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Source</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="source in sources" class="dropdown-item" v-bind:href="source.url" target="_blank">{{source.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウンここまで-->
+         
+         <!--カテゴリ毎ドロップダウンここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a class="dropdown-item" @click="toggle('99999')" >MAIN APPSHEET</a>
+              <a v-for="sheet in sheets" class="dropdown-item" @click="toggle(sheet.id)" >{{sheet.name}}</a>
+            </div>
+          </li>
+         <!--カテゴリ毎ドロップダウンここまで-->
+      
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="drive in drives" class="dropdown-item" v-bind:href="drive.url" target="_blank">{{drive.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Gsuite</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="gsuite in gsuites" class="dropdown-item" v-bind:href="gsuite.url" target="_blank">{{gsuite.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="tool in tools" class="dropdown-item" v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="it in its" class="dropdown-item" v-bind:href="it.url" target="_blank">{{it.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="tv in tvs" class="dropdown-item" v-bind:href="tv.url" target="_blank">{{tv.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+           <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="prv in prvs" class="dropdown-item" v-bind:href="prv.url" target="_blank">{{prv.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+        </ul>
+      </div>
+      <!--ドロップダウンリストここまで-->
+    </nav>
+  <!--ナビバーここまで-->
+  </br>
+     
+     <!--ドロップダウンに対するリアクションここから-->
+      <div id="sub">
+        
+        <!--カテゴリ内フレームここから-->
+        <div v-for="sheet in sheets">
+         <div v-if="showContents==sheet.id">
+          <div class="embed-responsive embed-responsive-21by9 bg-light"> 
+            <iframe class="embed-responsive-item allowfullscreen" v-bind:src="sheet.url"></iframe>
+          </div>
+         </div>
+        </div>
+        <!--カテゴリ内フレームここまで-->
+
+      </div>
+      <!--ドロップダウンに対するリアクションここまで-->
+    
+  </div>
+  <!--appここまで-->
+</body>
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+<script>
+var app = new Vue({
+  el:"#app",
+  data:{
+    sources:[
+      {id:"0001",name:"Google Scholar",url:"https://scholar.google.co.jp/schhp?hl=ja"},
+      {id:"0002",name:"Progate",url:"https://prog-8.com/dashboard"},
+      {id:"0003",name:"Flier",url:"https://www.flierinc.com/"},
+      {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
+      {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
+      {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
+      {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
+      {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
+      {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
+      {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},
+      {id:"0011",name:"CS50.jp",url:"https://cs50.jp/"},
+      {id:"0012",name:"JICA 課題一覧",url:"https://www.jica.go.jp/priv_partner/case/reference/subjects/index.html"},
+      {id:"0013",name:"シースラ",url:"https://cone-c-slide.com/see-sla/"},
+    ],
+    sheets:[
+      {id:"1001",name:"読書ノート",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1984032675"},
+      {id:"1002",name:"生活管理",url:"https://docs.google.com/spreadsheets/d/1o_YgaL958kVqM0YIUI5qC25otvOMSErtmQBYikImZxE/edit"},
+      {id:"1003",name:"業務ノート",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1612533246"},
+      {id:"1004",name:"プログラミング",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1189295260"},
+    ],
+    drives:[
+      {id:"3001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
+      {id:"3002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
+      {id:"3003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
+      {id:"3004",name:"DropBox",url:"https://www.dropbox.com/home"},
+    ],
+    gsuites:[
+      {id:"4001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
+      {id:"4002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
+      {id:"4003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
+      {id:"4004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
+    ],
+    tools:[
+      {id:"5000",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
+      {id:"5001",name:"Toggl Track",url:"https://track.toggl.com/"},
+      {id:"5002",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
+      {id:"5003",name:"beautiful.ai",url:"https://www.beautiful.ai"},
+      {id:"5004",name:"GoogleDataPortal",url:"https://datastudio.google.com/"},
+      {id:"5005",name:"RESAS",url:"https://resas.go.jp/"},
+      {id:"5006",name:"Inoreader",url:"https://www.inoreader.com/all_articles"},
+      {id:"5007",name:"MindMeister",url:"https://www.mindmeister.com/folders"},
+      {id:"5008",name:"Canva",url:"https://www.canva.com/ja_jp/"},
+      {id:"5009",name:"draw.io",url:"https://www.draw.io/"},
+      {id:"5010",name:"OnlineAlarm",url:"https://onlinealarmkur.com/ja/"},
+      {id:"5011",name:"Nola",url:"https://nola-novel.com/home"},
+      {id:"5012",name:"Copy Folder",url:"https://script.google.com/macros/s/AKfycbxbGNGajrxv-HbX2sVY2OTu7yj9VvxlOMOeQblZFuq7rYm7uyo/exec"},
+      {id:"5013",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
+      {id:"5014",name:"icooon-mono",url:"https://icooon-mono.com/"},
+      {id:"5015",name:"Figma",url:"https://www.figma.com/ja/"},
+    ],
+    its:[
+      {id:"6001",name:"Qiita",url:"https://qiita.com/"},
+      {id:"6002",name:"Github",url:"https://github.com/"},
+      {id:"6003",name:"Udemy",url:"https://www.udemy.com/"},
+      {id:"6004",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
+      {id:"6005",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
+      {id:"6006",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
+    ],
+    tvs:[
+      {id:"7000",name:"Pixiv",url:"https://www.pixiv.net/"},
+      {id:"7001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
+      {id:"7002",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
+      {id:"7003",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
+      {id:"7004",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
+      {id:"7005",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
+      {id:"7006",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
+      {id:"7007",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
+      {id:"7008",name:"NijiMado",url:"https://niji-mado.web.app/home"},
+      {id:"7009",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
+      {id:"7010",name:"U-Next",url:"https://video.unext.jp/"},
+    ],
+    prvs:[
+      {id:"9001",name:"Twitter",url:"https://twitter.com/home"},
+      {id:"9002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
+      {id:"9003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
+      {id:"9004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
+      {id:"9005",name:"Facebook",url:"https://www.facebook.com/"},
+      {id:"9006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
+      {id:"9007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
+
+    ],
+    showContents:["99999"],
+    showContents2:["100002"],
+    isHovering: false,
+    showNav: true
+  },
+  watch: {
+  showNav(newVal) {
+    const iframe = this.$refs.fullscreenFrame;
+    if (iframe) {
+        iframe.style.pointerEvents = newVal ? 'none' : 'auto';
+      }
+    }
+  },
+  mounted() {
+    window.addEventListener('mousemove', this.handleMouseMove);
+    },
+  beforeDestroy() {
+    window.removeEventListener('mousemove', this.handleMouseMove);
+  },
+  methods:{
+    handleMouseMove(e) {
+      const y = e.clientY;
+      this.showNav = (y < 100); // 上から100px以内で表示
+    },// 既存の toggle, reload... メソッドはそのままでOK
+    toggle:function(data){
+      this.showContents = [];
+      this.showContents.push(data);//配列にフラグを追加 1001など    
+    },
+    toggle2:function(data){
+     this.showContents2 = [];
+     this.showContents2.push(data);//配列にフラグを追加 1001など  
+    },
+  },
+});
+</script>
+</html>
