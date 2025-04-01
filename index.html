@@ -177,24 +177,33 @@
       <div class="collapse navbar-collapse" id="navbarNavDropdown">
         <ul class="navbar-nav">
  
-         <!--カテゴリ毎ドロップダウンここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Source</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="source in sources" :key="source.id" class="dropdown-item" v-bind:href="source.url" target="_blank">{{source.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウンここまで-->
-         
-         <!--カテゴリ毎ドロップダウンここから-->
+         <!--カテゴリ毎ドロップダウン(リンク)ここから-->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="knowledge in knowledges" :key="knowledge.id" class="dropdown-item" v-bind:href="knowledge.url" target="_blank">{{knowledge.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+         
+        <!--埋め込み用ドロップダウンリストここから 
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
             <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
               <a class="dropdown-item" @click="toggle('99999')" >MAIN APPSHEET</a>
               <a v-for="sheet in sheets" :key="sheet.id" class="dropdown-item" @click="toggle(sheet.id)" >{{sheet.name}}</a>
             </div>
           </li>
-         <!--カテゴリ毎ドロップダウンここまで-->
+          ここまで-->
+          
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="learning in learnings" :key="learning.id" class="dropdown-item" v-bind:href="learning.url" target="_blank">{{learning.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
       
           <!--カテゴリ毎ドロップダウン(リンク)ここから-->
           <li class="nav-item dropdown">
@@ -207,7 +216,7 @@
 
           <!--カテゴリ毎ドロップダウン(リンク)ここから-->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Gsuite</a>
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
             <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
               <a v-for="gsuite in gsuites" :key="gsuite.id" class="dropdown-item" v-bind:href="gsuite.url" target="_blank">{{gsuite.name}}</a>
             </div>
@@ -259,7 +268,7 @@
      <!--ドロップダウンに対するリアクションここから-->
       <div id="sub">
         
-        <!--カテゴリ内フレームここから-->
+        <!--カテゴリ内フレームここから
         <div v-for="sheet in sheets" :key="sheet.id">
          <div v-if="showContents==sheet.id">
           <div class="embed-responsive embed-responsive-21by9 bg-light"> 
@@ -267,7 +276,7 @@
           </div>
          </div>
         </div>
-        <!--カテゴリ内フレームここまで-->
+        カテゴリ内フレームここまで-->
 
       </div>
       <!--ドロップダウンに対するリアクションここまで-->
@@ -281,83 +290,77 @@
 var app = new Vue({
   el:"#app",
   data:{
-    sources:[
-      {id:"0001",name:"Google Scholar",url:"https://scholar.google.co.jp/schhp?hl=ja"},
-      {id:"0002",name:"Progate",url:"https://prog-8.com/dashboard"},
-      {id:"0003",name:"Flier",url:"https://www.flierinc.com/"},
+     knowledges:[
+      {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+      {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
+      {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
       {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
       {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
       {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
       {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
       {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
       {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
-      {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},
-      {id:"0011",name:"CS50.jp",url:"https://cs50.jp/"},
-      {id:"0012",name:"JICA 課題一覧",url:"https://www.jica.go.jp/priv_partner/case/reference/subjects/index.html"},
-      {id:"0013",name:"シースラ",url:"https://cone-c-slide.com/see-sla/"},
+      {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
     ],
-    sheets:[
-      {id:"1001",name:"読書ノート",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1984032675"},
-      {id:"1002",name:"生活管理",url:"https://docs.google.com/spreadsheets/d/1o_YgaL958kVqM0YIUI5qC25otvOMSErtmQBYikImZxE/edit"},
-      {id:"1003",name:"業務ノート",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1612533246"},
-      {id:"1004",name:"プログラミング",url:"https://docs.google.com/spreadsheets/d/12L1nxuMpnG3d4t-i0gyN5VCHFthUeSufhFlX_wgbxUg/edit#gid=1189295260"},
+    learnings:[
+      {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
+      {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
+      {id:"1003",name:"マナパス",url:"https://manapass.jp/"},
+      {id:"1004",name:"Progate",url:"https://prog-8.com/dashboard"},
+      {id:"1005",name:"Udemy",url:"https://www.udemy.com/"},
     ],
     drives:[
-      {id:"3001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
-      {id:"3002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
-      {id:"3003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
-      {id:"3004",name:"DropBox",url:"https://www.dropbox.com/home"},
+      {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
+      {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
+      {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
+      {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
     ],
     gsuites:[
-      {id:"4001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
-      {id:"4002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
-      {id:"4003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
-      {id:"4004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
+      {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
+      {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
+      {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
+      {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
     ],
     tools:[
-      {id:"5001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-      {id:"5002",name:"Claude",url:"https://claude.ai/new"},
-      {id:"5003",name:"Dify",url:"https://cloud.dify.ai/apps"},
-      {id:"5004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
-      {id:"5005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
-      {id:"5006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
-      {id:"5007",name:"draw.io",url:"https://www.draw.io/"},
-      {id:"5008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
-      {id:"5009",name:"icooon-mono",url:"https://icooon-mono.com/"},
+      {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+      {id:"4002",name:"Claude",url:"https://claude.ai/new"},
+      {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
+      {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
+      {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
+      {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
+      {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
+      {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
+      {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
     ],
     its:[
-      {id:"6001",name:"Github",url:"https://github.com/"},
-      {id:"6002",name:"Qiita",url:"https://qiita.com/"},
-      {id:"6003",name:"Udemy",url:"https://www.udemy.com/"},
-      {id:"6004",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
-      {id:"6005",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
-      {id:"6006",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
+      {id:"5001",name:"Github",url:"https://github.com/"},
+      {id:"5002",name:"Qiita",url:"https://qiita.com/"},
+      {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
+      {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
+      {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
     ],
     tvs:[
-      {id:"7000",name:"Pixiv",url:"https://www.pixiv.net/"},
-      {id:"7001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
-      {id:"7002",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
-      {id:"7003",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
-      {id:"7004",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
-      {id:"7005",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
-      {id:"7006",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
-      {id:"7007",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
-      {id:"7008",name:"NijiMado",url:"https://niji-mado.web.app/home"},
-      {id:"7009",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
-      {id:"7010",name:"U-Next",url:"https://video.unext.jp/"},
+      {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
+      {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
+      {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
+      {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
+      {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
+      {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
+      {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
+      {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
+      {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
+      {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
     ],
     prvs:[
-      {id:"9001",name:"Twitter",url:"https://twitter.com/home"},
-      {id:"9002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
-      {id:"9003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
-      {id:"9004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
-      {id:"9005",name:"Facebook",url:"https://www.facebook.com/"},
-      {id:"9006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
-      {id:"9007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
+      {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
+      {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
+      {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
+      {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
+      {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
+      {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
+      {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
     ],
     showContents:["99999"],
-    showContents2:["100002"],
-    isHovering: false,
     showNav: true,
     iframeError: false,
     alreadyOpened: false,
@@ -387,9 +390,6 @@ var app = new Vue({
       this.alreadyOpened = false;
       this.iframeError = false; // エラー状態をリセット
       this.errorDetails = null;
-    },
-    toggle2: function(data) {
-      this.showContents2 = [data];
     },
     handleIframeLoad() {
       // AppSheet関連の場合
