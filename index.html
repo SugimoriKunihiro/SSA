@@ -212,9 +212,10 @@
             </div>
             
             <!-- デバッグ情報表示欄 -->
-            <div id="debugInfo" class="mt-3 text-left bg-dark p-2 rounded" style="font-size: 0.8rem; color: #aaa; display: none;">
+            <div id="debugInfo" class="mt-3 text-left bg-dark p-2 rounded" style="font-size: 0.8rem; color: #aaa; display: block;">
               <div id="debugGAPI">GAPI状態: 確認中...</div>
               <div id="debugAuth">Auth2状態: 確認中...</div>
+              <div id="debugRedirectUri">設定済みリダイレクトURI: https://sugimorikuihiro.github.io/ARIEL/</div>
             </div>
 
             <!-- または、カスタムデザインのボタン -->
@@ -452,11 +453,23 @@
       // 認証関連の設定
       // --------------------------------------------
       
-      // グローバル変数でAuth2の初期化状態を管理
-      let googleAuthInitialized = false;
-      let googleAuth2Instance = null;
-      // 初回読み込みフラグ - このフラグでページ読み込み時の初期化を1回だけに制限
-      let firstLoadAttempt = true;
+      // 固定リダイレクトURIを使用するオプション - URIを直接指定することでリダイレクトURIの不一致を解決
+      const useFixedRedirectUri = true; // リダイレクトURIの問題がある場合はtrueに設定
+      const fixedRedirectUri = 'https://sugimorikuihiro.github.io/ARIEL/';  // Google Consoleに登録したURIと完全に一致させる
+
+      // 現在のURLからリダイレクトURIを取得する（通常の方法）
+      function getCurrentRedirectUri() {
+        if (useFixedRedirectUri) {
+          console.log('固定リダイレクトURIを使用:', fixedRedirectUri);
+          return fixedRedirectUri;
+        }
+        
+        // 通常の方法でURLを処理
+        const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
+        const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+        console.log('動的リダイレクトURIを使用:', redirectUri);
+        return redirectUri;
+      }
       
       // 許可するGoogleアカウントのメールアドレス（配列に追加して複数設定可能）
       const allowedEmails = [
@@ -491,10 +504,10 @@
         console.log('GAPI検出: 読み込み開始');
         document.getElementById('debugGAPI').textContent = 'GAPI状態: 検出済み、auth2読み込み中...';
         
-        // 現在のURLを取得して正確なリダイレクトURIを設定
-        const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
-        const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+        // リダイレクトURIを取得
+        const redirectUri = getCurrentRedirectUri();
         console.log('使用するリダイレクトURI:', redirectUri);
+        document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトURI: ' + redirectUri;
         
         // auth2モジュールを読み込む
         gapi.load('auth2', function() {
@@ -620,15 +633,14 @@
         const element = document.getElementById('g-signin2');
         if (element) {
           try {
-            // 現在のURLを取得して正確なリダイレクトURIを設定
-            const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
-            const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+            // 固定または動的リダイレクトURIを取得
+            const redirectUri = getCurrentRedirectUri();
             
             auth2.attachClickHandler(element, {
               // ボタンクリック時のオプション
               prompt: 'select_account',    // アカウント選択画面を表示
               ux_mode: 'redirect',         // リダイレクトモードを使用
-              redirect_uri: redirectUri    // 現在のURLをリダイレクト先に設定
+              redirect_uri: redirectUri    // 明示的にリダイレクトURIを指定
             },
             function(googleUser) {
               onSignIn(googleUser);
@@ -638,7 +650,7 @@
               handleSignInError(error);
             });
             console.log('サインインボタンにハンドラを設定しました');
-            console.log('リダイレクトURI:', redirectUri);
+            console.log('ボタン用リダイレクトURI:', redirectUri);
             document.getElementById('debugAuth').textContent = 'Auth2状態: ボタン設定完了、リダイレクトURI: ' + redirectUri;
           } catch (e) {
             console.error('ボタンハンドラ設定エラー:', e);
@@ -659,11 +671,10 @@
         }
         
         try {
-          // 現在のURLを取得して正確なリダイレクトURIを設定
-          const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
-          const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
-          console.log('使用するリダイレクトURI:', redirectUri);
-          document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトURI: ' + redirectUri;
+          // 固定または動的リダイレクトURIを取得
+          const redirectUri = getCurrentRedirectUri();
+          console.log('サインイントリガー - リダイレクトURI:', redirectUri);
+          document.getElementById('debugAuth').textContent = 'Auth2状態: サインイン開始、リダイレクトURI: ' + redirectUri;
           
           // すでに初期化済みの認証インスタンスがあるか確認
           let authInstance;
