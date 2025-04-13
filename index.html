@@ -12,8 +12,8 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
       integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
     <script src="https://apis.google.com/js/platform.js" async defer></script>
-    <!-- 実際の使用時はあなた自身のクライアントIDに置き換えてください -->
-    <meta name="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4" content="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com">
+    <!-- Google クライアントIDの正しい設定 -->
+    <meta name="google-signin-client_id" content="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com">
 
     <style>
       /* 共通スタイル */
@@ -211,8 +211,14 @@
               <div id="g-signin2" class="g-signin2" data-onsuccess="onSignIn"></div>
             </div>
             
+            <!-- デバッグ情報表示欄 -->
+            <div id="debugInfo" class="mt-3 text-left bg-dark p-2 rounded" style="font-size: 0.8rem; color: #aaa; display: none;">
+              <div id="debugGAPI">GAPI状態: 確認中...</div>
+              <div id="debugAuth">Auth2状態: 確認中...</div>
+            </div>
+
             <!-- または、カスタムデザインのボタン -->
-            <button onclick="triggerGoogleSignIn()" class="custom-signin-button">
+            <button onclick="triggerGoogleSignIn()" class="custom-signin-button mt-3">
               <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
               Googleアカウントでログイン
             </button>
@@ -439,13 +445,81 @@
         // 必要に応じて追加
       ];
       
+      // Google認証の初期化
+      function initGoogleAuth() {
+        // ページ読み込み完了時の処理
+        if (typeof gapi !== 'undefined') {
+          gapi.load('auth2', function() {
+            // Auth2の初期化
+            gapi.auth2.init({
+              client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+              cookiepolicy: 'single_host_origin',
+            }).then(function(auth2) {
+              // 初期化成功
+              console.log('Google Auth2初期化成功');
+              
+              // デバッグ情報更新
+              document.getElementById('debugGAPI').textContent = 'GAPI状態: 読み込み完了';
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
+              
+              // すでにサインインしているかチェック
+              if (auth2.isSignedIn.get()) {
+                const googleUser = auth2.currentUser.get();
+                onSignIn(googleUser);
+              }
+              
+              // サインインボタンにクリックハンドラを追加
+              const element = document.getElementById('g-signin2');
+              if (element) {
+                auth2.attachClickHandler(element, {},
+                  function(googleUser) {
+                    onSignIn(googleUser);
+                  },
+                  function(error) {
+                    console.error('Sign-in error', error);
+                    showError('Google認証に失敗しました: ' + error.error);
+                  }
+                );
+              }
+            }).catch(function(error) {
+              // 初期化失敗
+              console.error('Google Auth2初期化失敗', error);
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + error;
+              showError('Google認証の初期化に失敗しました。ページを再読み込みしてください。');
+            });
+          });
+        } else {
+          console.error('Google API (gapi) が見つかりません');
+          document.getElementById('debugGAPI').textContent = 'GAPI状態: 未読み込み';
+          setTimeout(initGoogleAuth, 1000); // 1秒後に再試行
+        }
+      }
+      
       // Google サインインを手動でトリガー
       function triggerGoogleSignIn() {
         try {
-          document.querySelector('.g-signin2 div[role="button"]').click();
+          if (typeof gapi !== 'undefined' && gapi.auth2) {
+            const auth2 = gapi.auth2.getAuthInstance();
+            if (auth2) {
+              auth2.signIn().then(function(googleUser) {
+                onSignIn(googleUser);
+              }).catch(function(error) {
+                console.error('Manual sign-in error', error);
+                showError('Google認証に失敗しました: ' + (error.error || 'エラー詳細不明'));
+              });
+            } else {
+              showError('Google認証が初期化されていません。ページを再読み込みしてください。');
+            }
+          } else {
+            console.error('gapi.auth2 が初期化されていません');
+            // デバッグ表示を表示
+            document.getElementById('debugInfo').style.display = 'block';
+            showError('Google認証が読み込まれていません。少し待ってから再試行してください。');
+          }
         } catch (e) {
-          console.error('Google Sign-Inボタンが見つかりませんでした。GoogleのJSライブラリが正しく読み込まれているか確認してください。', e);
-          showError('Google認証の初期化に失敗しました。ページを再読み込みしてください。');
+          console.error('Google Sign-Inボタン操作エラー', e);
+          document.getElementById('debugInfo').style.display = 'block';
+          showError('Google認証の操作中にエラーが発生しました: ' + e.message);
         }
       }
       
@@ -453,25 +527,38 @@
       function onSignIn(googleUser) {
         showLoading();
         
-        // ユーザープロフィール情報の取得
-        const profile = googleUser.getBasicProfile();
-        const email = profile.getEmail();
-        
-        // 許可リストにあるメールアドレスかチェック
-        if (allowedEmails.includes(email)) {
-          // 認証成功：ローカルストレージに認証トークンを保存
-          const authToken = googleUser.getAuthResponse().id_token;
-          localStorage.setItem('ariel_auth_token', authToken);
-          localStorage.setItem('ariel_email', email);
+        try {
+          // ユーザープロフィール情報の取得
+          const profile = googleUser.getBasicProfile();
+          const email = profile.getEmail();
           
-          // メインコンテンツを表示
-          setTimeout(() => {
-            showApp(email);
-          }, 1000);
-        } else {
-          // 認証失敗
-          googleUser.disconnect();
-          showError('このGoogleアカウントには、このページへのアクセス権限がありません。');
+          console.log('Google認証成功: ' + email);
+          
+          // 許可リストにあるメールアドレスかチェック
+          if (allowedEmails.includes(email)) {
+            // 認証成功：ローカルストレージに認証トークンを保存
+            const authToken = googleUser.getAuthResponse().id_token;
+            localStorage.setItem('ariel_auth_token', authToken);
+            localStorage.setItem('ariel_email', email);
+            
+            // メインコンテンツを表示
+            setTimeout(() => {
+              showApp(email);
+            }, 1000);
+          } else {
+            // 認証失敗
+            const auth2 = gapi.auth2.getAuthInstance();
+            if (auth2) {
+              auth2.signOut().then(function() {
+                showError(`このGoogleアカウント (${email}) には、このページへのアクセス権限がありません。`);
+              });
+            } else {
+              showError('このGoogleアカウントには、このページへのアクセス権限がありません。');
+            }
+          }
+        } catch (error) {
+          console.error('プロフィール取得エラー', error);
+          showError('ユーザー情報の取得に失敗しました: ' + error.message);
         }
       }
       
@@ -515,20 +602,27 @@
         localStorage.removeItem('ariel_email');
         
         // Google認証をサインアウト
-        const auth2 = gapi.auth2.getAuthInstance();
-        if (auth2) {
-          auth2.signOut().then(() => {
-            // ページをリロード
+        if (typeof gapi !== 'undefined' && gapi.auth2) {
+          const auth2 = gapi.auth2.getAuthInstance();
+          if (auth2) {
+            auth2.signOut().then(() => {
+              // ページをリロード
+              window.location.reload();
+            });
+          } else {
+            // gapi.auth2が初期化されていない場合はリロードのみ
             window.location.reload();
-          });
+          }
         } else {
-          // gapi.auth2が初期化されていない場合はリロードのみ
           window.location.reload();
         }
       }
       
       // ページ読み込み時に認証状態をチェック
       document.addEventListener('DOMContentLoaded', function() {
+        // Google Auth2を初期化
+        initGoogleAuth();
+        
         // すでに認証済みかチェック
         const authToken = localStorage.getItem('ariel_auth_token');
         const email = localStorage.getItem('ariel_email');
@@ -554,63 +648,6 @@
             {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
             {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
             {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
-          ],
-          learnings:[
-            {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
-            {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
-            {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
-            {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
-          ],
-          drives:[
-            {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
-            {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
-            {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
-            {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
-          ],
-          gsuites:[
-            {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
-            {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
-            {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
-            {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
-          ],
-          tools:[
-            {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-            {id:"4002",name:"Claude",url:"https://claude.ai/new"},
-            {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
-            {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
-            {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
-            {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
-            {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
-            {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
-            {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
-          ],
-          its:[
-            {id:"5001",name:"Github",url:"https://github.com/"},
-            {id:"5002",name:"Qiita",url:"https://qiita.com/"},
-            {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
-            {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
-            {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
-          ],
-          tvs:[
-            {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
-            {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
-            {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
-            {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
-            {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
-            {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
-            {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
-            {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
-            {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
-            {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
-          ],
-          prvs:[
-            {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
-            {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
-            {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
-            {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
-            {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
-            {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
-            {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
           ],
           showContents:["99999"],
           showNav: true,
@@ -757,3 +794,60 @@
     </script>
   </body>
 </html>
+          learnings:[
+            {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
+            {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
+            {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
+            {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
+          ],
+          drives:[
+            {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
+            {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
+            {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
+            {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
+          ],
+          gsuites:[
+            {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
+            {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
+            {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
+            {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
+          ],
+          tools:[
+            {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+            {id:"4002",name:"Claude",url:"https://claude.ai/new"},
+            {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
+            {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
+            {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
+            {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
+            {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
+            {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
+            {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
+          ],
+          its:[
+            {id:"5001",name:"Github",url:"https://github.com/"},
+            {id:"5002",name:"Qiita",url:"https://qiita.com/"},
+            {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
+            {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
+            {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
+          ],
+          tvs:[
+            {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
+            {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
+            {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
+            {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
+            {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
+            {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
+            {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
+            {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
+            {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
+            {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
+          ],
+          prvs:[
+            {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
+            {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
+            {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
+            {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
+            {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
+            {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
+            {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
+          ],
