@@ -29,37 +29,10 @@
       #app {
         height: 100%;
         overflow: hidden;
+        display: none; /* 最初は非表示 */
       }
 
-      /* フルスクリーンAppSheetコンテナ */
-      .fullscreen-appsheet {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 1;
-      }
-
-      .fullscreen-appsheet iframe {
-        width: 100%;
-        height: 100%;
-        border: none;
-      }
-      
-      /* AppSheetヘルパーのスタイル */
-      .appsheet-helper {
-        opacity: 0.95;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        transition: opacity 0.3s ease;
-        z-index: 1000;
-      }
-      
-      .appsheet-helper:hover {
-        opacity: 1;
-      }
-
-      /* ホバーゾーンとナビゲーションバー - 元の動作に戻す */
+      /* ホバーゾーンとナビゲーションバー */
       #nav-hover-zone {
         position: fixed;
         top: 0;
@@ -87,6 +60,34 @@
 
       #nav-hover-bar.active {
         transform: translateY(0%);
+      }
+
+      /* フルスクリーンAppSheetコンテナ - 参考コードから取得 */
+      .fullscreen-appsheet {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+      }
+
+      .fullscreen-appsheet iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+      
+      /* AppSheetヘルパーのスタイル */
+      .appsheet-helper {
+        opacity: 0.95;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+      }
+      
+      .appsheet-helper:hover {
+        opacity: 1;
       }
 
       /* 認証関連のスタイル */
@@ -191,38 +192,35 @@
         display: none;
       }
 
-      /* ユーザー認証ステータス - 元の位置に戻す */
-      .user-auth-status {
-        position: fixed;
-        top: 10px;
-        right: 15px;
-        z-index: 102;
+      /* ユーザー情報表示 - ナビゲーションバー内に配置 */
+      .user-info {
         display: flex;
         align-items: center;
-        color: white;
-        font-size: 0.8rem;
+        margin-left: auto;
+        margin-right: 10px;
       }
       
       .user-email {
         margin-right: 10px;
+        font-size: 0.8rem;
         max-width: 200px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
       }
       
-      .logout-btn {
+      .action-btn {
         background-color: rgba(255, 255, 255, 0.2);
         color: white;
         border: none;
-        padding: 3px 8px;
+        padding: 2px 8px;
+        margin-left: 5px;
         border-radius: 4px;
         font-size: 0.75rem;
         cursor: pointer;
-        transition: background-color 0.2s;
       }
       
-      .logout-btn:hover {
+      .action-btn:hover {
         background-color: rgba(255, 255, 255, 0.3);
       }
 
@@ -239,15 +237,25 @@
         width: 100%;
       }
 
-      /* AppSheet表示調整 - Entire app must be in viewエラー対策 */
-      #iframe-container {
+      /* 通知ツールチップ */
+      .tooltip-message {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        padding: 0;
-        margin: 0;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 15px;
+        border-radius: 4px;
+        z-index: 1000;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+      }
+
+      .tooltip-message.show {
+        opacity: 1;
       }
     </style>
   </head>
@@ -310,15 +318,9 @@
       </div>
     </div>
 
-    <!-- ユーザー認証ステータス - 元の位置 -->
-    <div class="user-auth-status" id="user-auth-status" style="display: none;">
-      <span class="user-email" id="user-email"></span>
-      <button class="logout-btn" onclick="logout()">ログアウト</button>
-    </div>
-
     <!-- メインアプリ -->
-    <div id="app" v-show="isAppVisible">
-      <!-- ホバーゾーンとナビ - 元の動作を維持 -->
+    <div id="app">
+      <!-- ホバーゾーンとナビ - 参考コードのように単純化 -->
       <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
       <nav 
         id="nav-hover-bar"
@@ -408,29 +410,35 @@
             </li>
             <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
           </ul>
+          
+          <!-- ユーザー情報とアクションボタン - ナビゲーションバー内に配置 -->
+          <div class="user-info">
+            <span class="user-email" id="user-email">{{ userEmail }}</span>
+            <button class="action-btn" @click="openInNewTab" title="新しいタブで開く">新タブ</button>
+            <button class="action-btn" @click="logout">ログアウト</button>
+          </div>
         </div>
         <!--ドロップダウンリストここまで-->
       </nav>
 
-      <!-- iframe全画面 - AppSheet iframe用のコンテナ作成 -->
+      <!-- ツールチップメッセージ -->
+      <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
+
+      <!-- iframe全画面 - 参考コードの構造を採用 -->
       <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
-        <div id="iframe-container">
-          <iframe
-            v-show="isAppVisible"
-            :src="appsheetUrl"
-            id="appsheet-iframe"
-            ref="fullscreenFrame" <!-- ←これがないとVueの参照が壊れます -->
-            :style="{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              pointerEvents: showNav ? 'none' : 'auto'
-            }"
-            scrolling="yes"
-            allowfullscreen="true"
-            allow="clipboard-read; clipboard-write;">
-          </iframe>
-        </div>
+        <iframe
+          src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
+          id="appsheetFrame"
+          :style="{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: showNav ? 'none' : 'auto'
+          }"
+          allowfullscreen
+          allow="clipboard-read; clipboard-write;"
+          @load="handleIframeLoad">
+        </iframe>
       </div>
       
     </div>
@@ -472,9 +480,10 @@
         // メインアプリを表示
         document.getElementById('app').style.display = 'block';
         
-        // ユーザー情報表示
-        document.getElementById('user-email').textContent = userEmail;
-        document.getElementById('user-auth-status').style.display = 'flex';
+        // Vue.jsアプリにメールアドレスを渡す
+        if (window.app) {
+          window.app.userEmail = userEmail;
+        }
       }
       
       // 直接ログイン機能
@@ -506,17 +515,6 @@
         
         // メイン画面表示
         showApp('緊急アクセスモード');
-      }
-      
-      // ログアウト関数
-      function logout() {
-        // ローカルストレージから認証情報を削除
-        localStorage.removeItem('ariel_auth_token');
-        localStorage.removeItem('ariel_email');
-        localStorage.removeItem('ariel_emergency');
-        
-        // ページをリロード
-        window.location.reload();
       }
       
       // ページ読み込み時に実行
@@ -557,11 +555,11 @@
         }
       });
       
-      // Vue インスタンス作成
+      // Vue インスタンス作成 - シンプル化して必要な機能だけ残す
       window.app = new Vue({
         el:"#app",
         data:{
-           knowledges:[
+          knowledges:[
             {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
             {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
             {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
@@ -631,201 +629,78 @@
             {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
           ],
           showContents:["99999"],
-          showNav: true,
-          isAppVisible: false,
-          iframeError: false,
-          alreadyOpened: false,
+          showNav: false, // 初期状態では非表示
           tooltipMessage: '',
           showTooltip: false,
-          appsheetUrl: 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b',
-          iframeLoadCount: 0,
-          iframeLoaded: false,
-          userEmail: '' // ユーザーメールアドレスをVueで管理
-        },
-        watch: {
-          showNav(newVal) {
-            const iframe = this.$refs.fullscreenFrame;
-            if (iframe) {
-              iframe.style.pointerEvents = newVal ? 'none' : 'auto';
-            }
-          }
+          userEmail: ''
         },
         mounted() {
           window.addEventListener('mousemove', this.handleMouseMove);
           
-          // iframe表示の最適化
-          this.optimizeIframeDisplay();
-          
-          // ユーザーメールアドレスを初期化
+          // ローカルストレージからユーザー情報を取得
           const email = localStorage.getItem('ariel_email');
           const emergency = localStorage.getItem('ariel_emergency');
           this.userEmail = email || (emergency === 'true' ? '緊急アクセスモード' : 'ゲスト');
+          
+          // AppSheetを自動的に選択
+          this.showContents = ["99999"];
+          
+          // ナビゲーションバーを最初は非表示に
+          this.showNav = false;
         },
         beforeDestroy() {
           window.removeEventListener('mousemove', this.handleMouseMove);
         },
         methods:{
-            showApp(userEmail) {
-            console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
-
-            // v-show によって #app を表示（display: none を避ける）
-            this.isAppVisible = true;
-
-            // 認証ページを非表示（認証UI）
-            const authPage = document.getElementById('auth-page');
-            if (authPage) {
-              authPage.style.display = 'none';
-            }
-
-            // ユーザー情報の表示（右上の認証済みバッジなど）
-            const emailElem = document.getElementById('user-email');
-            if (emailElem) {
-              emailElem.textContent = userEmail;
-            }
-
-            const statusElem = document.getElementById('user-auth-status');
-            if (statusElem) {
-              statusElem.style.display = 'flex';
-            }
-
-            // iframeの読み込み最適化（位置をスクロールするなど）
-            this.$nextTick(() => {
-              this.optimizeIframeDisplay();
-            });
-          },
           handleMouseMove(e) {
             const y = e.clientY;
             this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
-          },
-          toggle: function(data) {
-            this.showContents = [data];
-            this.alreadyOpened = false;
-            this.iframeError = false;
             
-            // iframe表示の最適化
-            this.$nextTick(() => {
-              this.optimizeIframeDisplay();
-            });
-          },
-          
-          // iframe表示の最適化
-          optimizeIframeDisplay() {
-            const iframe = document.getElementById('appsheet-iframe');
-            if (!iframe) return;
-            
-            // iframeにパディングを追加して「Entire app must be in view」エラーを回避
-            this.showTooltip = true;
-            this.tooltipMessage = 'AppSheetを読み込んでいます...';
-            
-            setTimeout(() => {
-              this.showTooltip = false;
-            }, 5000);
-            
-            // ブラウザの全画面表示を促す
-            try {
-              // iframe要素がビューポート全体を占めるようにスタイルを調整
-              // AppSheetが完全に表示されるようにパディングを設定
-              iframe.style.width = '100%';
-              iframe.style.height = '100%';
-              iframe.style.position = 'relative';
-              iframe.style.boxSizing = 'border-box';
-              
-              // スクロールを0に設定して完全表示を確保
-              window.scrollTo(0, 0);
-              
-              // ウィンドウリサイズイベントでiframeのサイズを調整
-              window.addEventListener('resize', () => {
-                window.scrollTo(0, 0);
-              });
-              
-            } catch (e) {
-              console.error('iframeの最適化中にエラーが発生しました:', e);
-            }
-          },
-          
-          // iframeのロードハンドラ
-          handleIframeLoad() {
-            console.log('iframeがロードされました');
-            this.iframeLoaded = true;
-            this.iframeLoadCount++;
-            
-            // 「Entire app must be in view」エラーメッセージが表示された場合の対応
-            const iframe = this.$refs.fullscreenFrame;
-            if (!iframe) return;
-            
-            // iframe全体が表示されるようスクロールを調整
-            try {
-              // iframeが画面内に完全に表示されるようスクロール位置を調整
-              window.scrollTo(0, 0);
-              
-              // iframe内のドキュメントにアクセスできるか試みる
-              setTimeout(() => {
-                try {
-                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                  const errorMessages = iframeDoc.querySelectorAll('div, p, span');
-                  
-                  // エラーメッセージが表示されているか確認
-                  let hasViewError = false;
-                  
-                  errorMessages.forEach(el => {
-                    if (el.textContent && el.textContent.includes('Entire app must be in view')) {
-                      hasViewError = true;
-                    }
-                  });
-                  
-                  if (hasViewError) {
-                    // エラーメッセージが見つかった場合、ヘルパーメッセージを表示
-                    this.showTooltip = true;
-                    this.tooltipMessage = 'アプリ全体が表示されていません。ナビゲーションバーにある再読込ボタンをお試しください。';
-                    
-                    setTimeout(() => {
-                      this.showTooltip = false;
-                    }, 10000);
-                  }
-                } catch (e) {
-                  // クロスオリジンポリシーによりアクセスできない場合はスキップ
-                  console.warn('iframeのcontentDocumentにアクセスできません:', e);
-                }
-              }, 1000);
-            } catch (e) {
-              console.error('iframeのロード後の処理でエラーが発生しました:', e);
-            }
-          },
-          
-          // iframeのエラーハンドラ
-          handleIframeError(e) {
-            console.error('iframeでエラーが発生しました:', e);
-            this.iframeError = true;
-          },
-          
-          // iframeを再読み込み
-          reloadIframe() {
-            // iframeのURL属性を再設定して強制的に再読み込み
-            const iframe = this.$refs.fullscreenFrame;
-            if (iframe) {
-              // 現在のURLに時間パラメータを付加して強制的にリロード
-              this.appsheetUrl = `https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b?reload=${Date.now()}`;
-              
-              // エラー状態をリセット
-              this.iframeError = false;
-              this.iframeLoaded = false;
-              
-              // ヘルパーメッセージを表示
-              this.showTooltip = true;
-              this.tooltipMessage = 'AppSheetを再読み込みしています...';
-              
-              setTimeout(() => {
-                this.showTooltip = false;
+            // ナビゲーションバーが表示されている場合、5秒後に自動的に閉じる
+            if (this.showNav) {
+              clearTimeout(this.navTimeout);
+              this.navTimeout = setTimeout(() => {
+                this.showNav = false;
               }, 5000);
             }
           },
-          
-          // AppSheetを新しいタブで開く
-          openAppsheetInNewTab() {
-            window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
-            this.alreadyOpened = true;
+          toggle: function(data) {
+            this.showContents = [data];
             
-            // ヘルパーメッセージを表示
+            // ナビゲーションバーを閉じる（AppSheetの表示を邪魔しないように）
+            setTimeout(() => {
+              this.showNav = false;
+            }, 300);
+          },
+          handleIframeLoad() {
+            console.log('iframeがロードされました');
+            
+            // フレームが完全に読み込まれたことを通知
+            this.showTooltip = true;
+            this.tooltipMessage = 'AppSheetが読み込まれました';
+            
+            setTimeout(() => {
+              this.showTooltip = false;
+            }, 3000);
+            
+            // ナビゲーションバーを確実に非表示にする
+            this.showNav = false;
+            
+            // iframe内のdocumentにアクセスを試みる
+            try {
+              const iframe = document.getElementById('appsheetFrame');
+              if (iframe) {
+                // iframe全体を画面に収めるように調整
+                window.scrollTo(0, 0);
+                document.body.style.overflow = 'hidden';
+              }
+            } catch (e) {
+              console.warn('iframeへのアクセス中にエラーが発生しました:', e);
+            }
+          },
+          openInNewTab() {
+            window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
+            
             this.showTooltip = true;
             this.tooltipMessage = 'AppSheetを新しいタブで開きました';
             
@@ -833,8 +708,6 @@
               this.showTooltip = false;
             }, 3000);
           },
-          
-          // ログアウト処理
           logout() {
             // ローカルストレージから認証情報を削除
             localStorage.removeItem('ariel_auth_token');
