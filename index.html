@@ -20,7 +20,6 @@
       html, body {
         margin: 0;
         height: 100%;
-        overflow: hidden;
         background-color: #343a40;
         color: white;
       }
@@ -69,7 +68,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        z-index: 1;
+        z-index: 0;
       }
 
       .fullscreen-appsheet iframe {
@@ -425,9 +424,10 @@
       <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
 
       <!-- iframe全画面 - 参考コードの構造を採用 -->
-      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
+      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-if="showContents[0] === '99999'">
         <iframe
           src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
+          scrolling="yes"
           id="appsheetFrame"
           :style="{
             width: '100%',
@@ -679,6 +679,15 @@
             this.showTooltip = true;
             this.tooltipMessage = 'AppSheetが読み込まれました';
             
+            // AppSheetが「全体表示されている」と認識させるためスクロール位置調整
+            setTimeout(() => {
+              window.scrollTo(0, 0);
+            }, 200);
+
+            setTimeout(() => {
+              window.scrollTo(0, 0);
+            }, 1000);
+
             setTimeout(() => {
               this.showTooltip = false;
             }, 3000);
@@ -692,7 +701,6 @@
               if (iframe) {
                 // iframe全体を画面に収めるように調整
                 window.scrollTo(0, 0);
-                document.body.style.overflow = 'hidden';
               }
             } catch (e) {
               console.warn('iframeへのアクセス中にエラーが発生しました:', e);
