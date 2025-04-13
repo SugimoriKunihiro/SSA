@@ -869,67 +869,54 @@
           window.location.reload();
         }
       }
-      // ページロード時、認証レスポンスの確認
-      document.addEventListener('DOMContentLoaded', function() {
-      console.log('DOM読み込み完了、初期化を開始します');
+  // ページロード時、認証レスポンスの確認
+  document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM読み込み完了、初期化を開始します');
 
-      // デバッグ情報を表示
-      document.getElementById('debugInfo').style.display = 'block';
+  // ローカルストレージ確認
+  const authToken = localStorage.getItem('ariel_auth_token');
+  const email = localStorage.getItem('ariel_email');
 
-      const authToken = localStorage.getItem('ariel_auth_token');
-      const email = localStorage.getItem('ariel_email');
+  if (authToken && email) {
+    console.log('ローカルストレージに認証情報があります');
+    showApp(email);
+    return;
+  }
 
-      if (authToken && email) {
-        console.log('ローカルストレージに認証情報があります');
-        showApp(email);
-        return;
+  // 認証済みかチェックして onSignIn を呼ぶ
+  if (typeof gapi !== 'undefined') {
+    gapi.load('auth2', () => {
+      const auth2 = gapi.auth2.getAuthInstance();
+      if (auth2 && auth2.isSignedIn.get()) {
+        console.log('再ログイン中のユーザーを検出');
+        const googleUser = auth2.currentUser.get();
+        onSignIn(googleUser);
+      } else {
+        initGoogleAuth(); // 初期化しておく
       }
-
+    });
+  } else {
+    console.warn('gapiが未ロード。再試行します');
+    let retry = 0;
+    const interval = setInterval(() => {
       if (typeof gapi !== 'undefined') {
-        gapi.load('auth2', function () {
-          let auth2;
-          try {
-            auth2 = gapi.auth2.getAuthInstance();
-          } catch (e) {
-            console.error('auth2インスタンス取得失敗:', e);
-            return;
-          }
-
+        clearInterval(interval);
+        gapi.load('auth2', () => {
+          const auth2 = gapi.auth2.getAuthInstance();
           if (auth2 && auth2.isSignedIn.get()) {
-            console.log('既にログイン済みのユーザーがいます');
-            const googleUser = auth2.currentUser.get();
-            onSignIn(googleUser);
+            onSignIn(auth2.currentUser.get());
           } else {
-            console.log('ログイン済みユーザーがいないため、サインインを試みます');
-            auth2.signIn().then(googleUser => {
-              onSignIn(googleUser);
-            }).catch(error => {
-              console.error('自動サインイン失敗:', error);
-            });
+            initGoogleAuth();
           }
         });
-      } else {
-        console.warn('gapiが未定義のため、10回まで再試行します');
-        let retry = 0;
-        const retryInterval = setInterval(() => {
-          if (typeof gapi !== 'undefined') {
-            clearInterval(retryInterval);
-            gapi.load('auth2', function () {
-              console.log('遅延読み込み後にauth2を初期化');
-              // 同じロジックを再実行
-              auth2 = gapi.auth2.getAuthInstance();
-              if (auth2 && auth2.isSignedIn.get()) {
-                onSignIn(auth2.currentUser.get());
-              }
-            });
-          }
-          if (++retry > 10) {
-            clearInterval(retryInterval);
-            showError('Google認証ライブラリの読み込みに失敗しました。再読み込みしてください。');
-          }
-        }, 1000);
       }
-    });   
+      if (++retry > 10) {
+        clearInterval(interval);
+        showError("Google認証が利用できません。ページを再読み込みしてください。");
+      }
+    }, 1000);
+  }
+});  
       // Vue インスタンス作成
       var app = new Vue({
         el:"#app",
