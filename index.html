@@ -29,7 +29,6 @@
       #app {
         height: 100%;
         overflow: hidden;
-        display: none; /* 最初は非表示 */
       }
 
       /* フルスクリーンAppSheetコンテナ */
@@ -418,7 +417,7 @@
         <div id="iframe-container">
           <iframe
             src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
-            id="appsheetFrame"
+            id="appsheet-iframe"
             ref="fullscreenFrame" <!-- ←これがないとVueの参照が壊れます -->
             :style="{
               width: '100%',
