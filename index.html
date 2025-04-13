@@ -190,15 +190,13 @@
         display: none;
       }
 
+      /* ホバーメニュー内にユーザー情報と操作ボタンを配置 */
       .user-auth-status {
-        position: fixed;
-        top: 10px;
-        right: 15px;
-        z-index: 102;
         display: flex;
         align-items: center;
-        color: white;
         font-size: 0.8rem;
+        margin-left: auto;
+        margin-right: 15px;
       }
       
       .user-email {
@@ -306,43 +304,54 @@
         flex-wrap: wrap;
       }
 
-      .action-buttons {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
+      /* ホバーメニュー内にアクションボタンを配置するためのスタイル */
+      .action-button-group {
         display: flex;
-        flex-direction: column;
         gap: 10px;
-        z-index: 1000;
+        margin-left: 10px;
       }
 
-      .action-button {
-        width: 50px;
-        height: 50px;
-        border-radius: 50%;
-        background-color: #007bff;
+      .nav-action-button {
+        background-color: rgba(255, 255, 255, 0.2);
         color: white;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        font-size: 20px;
         border: none;
-        transition: transform 0.3s, background-color 0.3s;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        display: flex;
+        align-items: center;
+      }
+      
+      .nav-action-button:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+      
+      .nav-action-button.refresh {
+        background-color: rgba(40, 167, 69, 0.3);
+      }
+      
+      .nav-action-button.refresh:hover {
+        background-color: rgba(40, 167, 69, 0.5);
+      }
+      
+      .nav-action-button.newtab {
+        background-color: rgba(23, 162, 184, 0.3);
+      }
+      
+      .nav-action-button.newtab:hover {
+        background-color: rgba(23, 162, 184, 0.5);
       }
 
-      .action-button:hover {
-        transform: scale(1.1);
-        background-color: #0056b3;
-      }
-
-      .action-button.refresh {
-        background-color: #28a745;
-      }
-
-      .action-button.newtab {
-        background-color: #17a2b8;
+      /* iframeの周りにパディングを設定して完全表示を実現 */
+      .iframe-padding-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 5px; /* 最小限のパディングで表示領域を確保 */
       }
     </style>
   </head>
@@ -405,30 +414,27 @@
       </div>
     </div>
 
-    <!-- ユーザー認証ステータス -->
-    <div class="user-auth-status" id="user-auth-status" style="display: none;">
-      <span class="user-email" id="user-email"></span>
-      <button class="logout-btn" onclick="logout()">ログアウト</button>
-    </div>
-
     <!-- メインアプリ -->
     <div id="app"><!--appここから-->
 
       <!-- iframe全画面 -->
       <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
         <div class="iframe-container">
-          <iframe
-            id="appsheet-iframe"
-            ref="fullscreenFrame"
-            :src="appsheetUrl"
-            style="width: 100%; height: 100%; border: none;"
-            scrolling="yes"
-            allowfullscreen="true"
-            allow="fullscreen; clipboard-read; clipboard-write; accelerometer; autoplay; camera; microphone; geolocation;"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
-            @load="handleIframeLoad"
-            @error="handleIframeError">
-          </iframe>
+          <!-- iframeの周りにパディングを設定 -->
+          <div class="iframe-padding-wrapper">
+            <iframe
+              id="appsheet-iframe"
+              ref="fullscreenFrame"
+              :src="appsheetUrl"
+              style="width: 100%; height: 100%; border: none;"
+              scrolling="yes"
+              allowfullscreen="true"
+              allow="fullscreen; clipboard-read; clipboard-write; accelerometer; autoplay; camera; microphone; geolocation;"
+              sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
+              @load="handleIframeLoad"
+              @error="handleIframeError">
+            </iframe>
+          </div>
           
           <!-- iframeのタイムアウトや読み込みエラーなどの問題時に表示するオーバーレイ -->
           <div class="iframe-overlay" v-if="iframeError">
@@ -448,16 +454,10 @@
         <div :class="['iframe-fix-tooltip', showTooltip ? 'show' : '']">
           {{ tooltipMessage }}
         </div>
-        
-        <!-- 固定アクションボタン -->
-        <div class="action-buttons">
-          <button @click="reloadIframe" class="action-button refresh" title="iframeを再読み込み">↻</button>
-          <button @click="openAppsheetInNewTab" class="action-button newtab" title="新しいタブで開く">↗</button>
-        </div>
       </div>
 
       <!-- ホバーゾーンとナビ -->
-      <div id="nav-hover-zone" v-show="showContents[0] !== '99999'" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
+      <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
       <nav 
         id="nav-hover-bar"
         class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
@@ -546,6 +546,22 @@
             </li>
             <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
           </ul>
+          
+          <!-- アクションボタンをナビゲーションバー内に配置 -->
+          <div class="action-button-group" v-if="showContents[0] === '99999'">
+            <button @click="reloadIframe" class="nav-action-button refresh" title="AppSheetを再読み込み">
+              ↻ 再読込
+            </button>
+            <button @click="openAppsheetInNewTab" class="nav-action-button newtab" title="新しいタブで開く">
+              ↗ 新タブ
+            </button>
+          </div>
+          
+          <!-- ユーザー情報もナビゲーションバー内に配置 -->
+          <div class="user-auth-status">
+            <span class="user-email" id="nav-user-email">{{ userEmail }}</span>
+            <button class="logout-btn" @click="logout">ログアウト</button>
+          </div>
         </div>
         <!--ドロップダウンリストここまで-->
       </nav>
@@ -600,9 +616,10 @@
         // メインアプリを表示
         document.getElementById('app').style.display = 'block';
         
-        // ユーザー情報表示
-        document.getElementById('user-email').textContent = userEmail;
-        document.getElementById('user-auth-status').style.display = 'flex';
+        // Vue.jsアプリにメールアドレスを渡す
+        if (window.app) {
+          window.app.userEmail = userEmail;
+        }
       }
       
       // ログアウト関数
@@ -686,7 +703,7 @@
       });
       
       // Vue インスタンス作成
-      var app = new Vue({
+      window.app = new Vue({
         el:"#app",
         data:{
            knowledges:[
@@ -766,7 +783,8 @@
           showTooltip: false,
           appsheetUrl: 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b',
           iframeLoadCount: 0,
-          iframeLoaded: false
+          iframeLoaded: false,
+          userEmail: '' // ユーザーメールアドレスをVueで管理
         },
         watch: {
           showNav(newVal) {
@@ -781,6 +799,11 @@
           
           // iframe表示の最適化
           this.optimizeIframeDisplay();
+          
+          // ユーザーメールアドレスを初期化
+          const email = localStorage.getItem('ariel_email');
+          const emergency = localStorage.getItem('ariel_emergency');
+          this.userEmail = email || (emergency === 'true' ? '緊急アクセスモード' : 'ゲスト');
         },
         beforeDestroy() {
           window.removeEventListener('mousemove', this.handleMouseMove);
@@ -806,10 +829,9 @@
             const iframe = document.getElementById('appsheet-iframe');
             if (!iframe) return;
             
-            // X-Frame-Optionsヘッダーを無視する拡張機能が機能しているか確認
-            // ここでは直接確認はできないので、ユーザーに通知します
+            // iframeにパディングを追加して「Entire app must be in view」エラーを回避
             this.showTooltip = true;
-            this.tooltipMessage = 'AppSheetを読み込んでいます...うまく表示されない場合は右下のボタンをご利用ください';
+            this.tooltipMessage = 'AppSheetを読み込んでいます...';
             
             setTimeout(() => {
               this.showTooltip = false;
@@ -818,24 +840,20 @@
             // ブラウザの全画面表示を促す
             try {
               // iframe要素がビューポート全体を占めるようにスタイルを調整
+              // AppSheetが完全に表示されるようにパディングを設定
               iframe.style.width = '100%';
               iframe.style.height = '100%';
-              iframe.style.position = 'absolute';
-              iframe.style.top = '0';
-              iframe.style.left = '0';
+              iframe.style.position = 'relative';
+              iframe.style.boxSizing = 'border-box';
               
-              // iframeのcontentWindowにアクセスできるかチェック
-              setTimeout(() => {
-                try {
-                  const iframeWindow = iframe.contentWindow;
-                  if (iframeWindow && iframeWindow.document) {
-                    console.log('iframeのcontentWindowにアクセスできました');
-                  }
-                } catch (e) {
-                  console.warn('iframeのcontentWindowにアクセスできません:', e);
-                  // アクセスできない場合はエラーハンドリングをスキップ
-                }
-              }, 2000);
+              // スクロールを0に設定して完全表示を確保
+              window.scrollTo(0, 0);
+              
+              // ウィンドウリサイズイベントでiframeのサイズを調整
+              window.addEventListener('resize', () => {
+                window.scrollTo(0, 0);
+              });
+              
             } catch (e) {
               console.error('iframeの最適化中にエラーが発生しました:', e);
             }
@@ -874,7 +892,7 @@
                   if (hasViewError) {
                     // エラーメッセージが見つかった場合、ヘルパーメッセージを表示
                     this.showTooltip = true;
-                    this.tooltipMessage = 'アプリ全体が表示されていません。ブラウザを全画面表示にするか、新しいタブで開いてください。';
+                    this.tooltipMessage = 'アプリ全体が表示されていません。ナビゲーションバーにある再読込ボタンをお試しください。';
                     
                     setTimeout(() => {
                       this.showTooltip = false;
@@ -930,6 +948,17 @@
             setTimeout(() => {
               this.showTooltip = false;
             }, 3000);
+          },
+          
+          // ログアウト処理
+          logout() {
+            // ローカルストレージから認証情報を削除
+            localStorage.removeItem('ariel_auth_token');
+            localStorage.removeItem('ariel_email');
+            localStorage.removeItem('ariel_emergency');
+            
+            // ページをリロード
+            window.location.reload();
           }
         }
       });
