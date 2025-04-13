@@ -222,6 +222,21 @@
               <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
               Googleアカウントでログイン
             </button>
+            
+            <!-- フォールバック認証オプション -->
+            <div id="fallback-signin-options" class="mt-4 pt-3 border-top" style="display: none;">
+              <p class="text-warning small"><strong>認証に問題が発生しています</strong></p>
+              <p class="small">以下の手順をお試しください:</p>
+              <ol class="small text-left">
+                <li>ブラウザの設定でサードパーティCookieを許可する</li>
+                <li>プライバシー保護モードを一時的に無効にする</li>
+                <li>シークレットブラウジングを使用している場合は通常モードに切り替える</li>
+                <li>別のブラウザで試す (Chrome推奨)</li>
+              </ol>
+              <button onclick="tryAlternativeSignIn()" class="btn btn-sm btn-warning mt-2">
+                別の方法でサインイン
+              </button>
+            </div>
           </div>
           
           <div id="errorMessage"></div>
@@ -455,12 +470,12 @@
         if (googleAuthInitialized) return;
         
         console.log('Google認証の初期化を開始します...');
+        document.getElementById('debugInfo').style.display = 'block';
         
         // gapiが読み込まれているか確認
         if (typeof gapi === 'undefined') {
           console.error('Google API (gapi) が見つかりません');
           document.getElementById('debugGAPI').textContent = 'GAPI状態: 未読み込み';
-          document.getElementById('debugInfo').style.display = 'block';
           // 1秒後に再試行
           setTimeout(initGoogleAuth, 1000);
           return;
@@ -474,34 +489,89 @@
           console.log('Auth2モジュール読み込み完了、初期化開始');
           document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み完了';
           
-          // Auth2の初期化
-          gapi.auth2.init({
-            client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-            cookiepolicy: 'single_host_origin',
-          }).then(function(auth2) {
-            // 初期化成功、グローバル変数に保存
-            googleAuth2Instance = auth2;
-            googleAuthInitialized = true;
-            
-            console.log('Google Auth2初期化成功');
-            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
-            
-            // サインインボタンの設定
-            setupSignInButton(auth2);
-            
-            // すでにサインインしているかチェック
-            if (auth2.isSignedIn.get()) {
-              const googleUser = auth2.currentUser.get();
-              onSignIn(googleUser);
-            }
-          }).catch(function(error) {
-            // 初期化失敗
-            console.error('Google Auth2初期化失敗', error);
-            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + error;
-            document.getElementById('debugInfo').style.display = 'block';
-            showError('Google認証の初期化に失敗しました: ' + error.error);
-          });
+          try {
+            // Auth2の初期化 - 追加オプション付き
+            gapi.auth2.init({
+              client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+              cookiepolicy: 'single_host_origin',
+              // 追加オプション: 同一オリジンのiframeのみ使用
+              ux_mode: 'popup',
+              // スコープを明示的に指定
+              scope: 'profile email'
+            }).then(function(auth2) {
+              // 初期化成功、グローバル変数に保存
+              googleAuth2Instance = auth2;
+              googleAuthInitialized = true;
+              
+              console.log('Google Auth2初期化成功');
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
+              
+              // サインインボタンの設定
+              setupSignInButton(auth2);
+              
+              // すでにサインインしているかチェック
+              if (auth2.isSignedIn.get()) {
+                const googleUser = auth2.currentUser.get();
+                onSignIn(googleUser);
+              }
+            }).catch(function(error) {
+              // 初期化失敗時の詳細エラー処理
+              handleAuthInitError(error);
+            });
+          } catch (e) {
+            // 例外をキャッチして詳細を表示
+            console.error('Auth2初期化中の例外:', e);
+            handleAuthInitError(e);
+          }
+        }, function(error) {
+          // auth2モジュール読み込み失敗
+          console.error('Auth2モジュール読み込み失敗:', error);
+          document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み失敗';
+          showError('Google認証モジュールの読み込みに失敗しました。ネットワーク接続を確認してください。');
         });
+      }
+      
+      // 認証初期化エラーの処理を分離
+      function handleAuthInitError(error) {
+        console.error('Google Auth2初期化失敗:', error);
+        
+        // オブジェクトの内容を詳細表示
+        const errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        console.error('エラー詳細:', errorDetails);
+        
+        // エラー内容に応じたメッセージ
+        let errorMessage = 'Google認証の初期化に失敗しました';
+        let errorCode = '';
+        
+        try {
+          if (error.error) {
+            errorCode = error.error;
+          } else if (typeof error === 'string') {
+            errorCode = error;
+          } else if (error.message) {
+            errorCode = error.message;
+          }
+        } catch (e) {
+          errorCode = 'エラー詳細の取得に失敗';
+        }
+        
+        // IDPiframe初期化エラーの特別処理
+        if (errorCode.includes('idpiframe_initialization_failed')) {
+          document.getElementById('debugAuth').textContent = 'Auth2状態: iDPiframe初期化エラー';
+          errorMessage = `Google認証の初期化に失敗しました: ${errorCode}\n\n` +
+                          '考えられる原因:\n' + 
+                          '・サードパーティCookieがブロックされている\n' +
+                          '・プライバシー保護機能が有効になっている\n' +
+                          '・ブラウザの拡張機能が干渉している';
+          
+          // フォールバックのサインインオプションを表示
+          document.getElementById('fallback-signin-options').style.display = 'block';
+        } else {
+          document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + errorCode;
+          errorMessage = `Google認証の初期化に失敗しました: ${errorCode}`;
+        }
+        
+        showError(errorMessage);
       }
 
       // サインインボタン設定を分離
@@ -548,9 +618,10 @@
               clearInterval(authCheckInterval);
               console.log('Auth2初期化完了を検出、サインイン実行');
               performGoogleSignIn();
-            } else if (checkCount > 10) {  // 10秒後にタイムアウト
+            } else if (checkCount > 5) {  // 5秒後に代替サインイン方法を表示
               clearInterval(authCheckInterval);
-              showError('Google認証の初期化がタイムアウトしました。ページを再読み込みしてください。');
+              document.getElementById('fallback-signin-options').style.display = 'block';
+              showError('Google認証の初期化に時間がかかっています。別の方法でのサインインをお試しください。');
             }
           }, 1000);
           
@@ -564,11 +635,15 @@
       function performGoogleSignIn() {
         try {
           if (googleAuth2Instance) {
-            googleAuth2Instance.signIn().then(function(googleUser) {
+            // ポップアップモードでサインイン
+            googleAuth2Instance.signIn({
+              prompt: 'select_account', // アカウント選択を強制
+              ux_mode: 'popup'          // ポップアップモードを使用
+            }).then(function(googleUser) {
               onSignIn(googleUser);
             }).catch(function(error) {
-              console.error('Manual sign-in error', error);
-              showError('Google認証に失敗しました: ' + (error.error || 'エラー詳細不明'));
+              // サインインエラーの詳細処理
+              handleSignInError(error);
             });
           } else {
             showError('Google認証インスタンスが取得できません。ページを再読み込みしてください。');
@@ -576,6 +651,70 @@
         } catch (e) {
           console.error('Google Sign-Inボタン操作エラー', e);
           showError('Google認証の操作中にエラーが発生しました: ' + e.message);
+          document.getElementById('fallback-signin-options').style.display = 'block';
+        }
+      }
+      
+      // サインインエラーの処理
+      function handleSignInError(error) {
+        console.error('サインインエラー:', error);
+        
+        let errorMessage = 'Google認証に失敗しました';
+        let errorCode = '';
+        
+        try {
+          if (error.error) {
+            errorCode = error.error;
+          } else if (typeof error === 'string') {
+            errorCode = error;
+          } else if (error.message) {
+            errorCode = error.message;
+          } else {
+            errorCode = JSON.stringify(error);
+          }
+        } catch (e) {
+          errorCode = 'エラー詳細の取得に失敗';
+        }
+        
+        // エラーコードに応じた具体的なメッセージ
+        if (errorCode.includes('popup_closed_by_user')) {
+          errorMessage = 'サインインがキャンセルされました。再度お試しください。';
+        } else if (errorCode.includes('popup_blocked')) {
+          errorMessage = 'ポップアップがブロックされました。ポップアップを許可して再度お試しください。';
+          document.getElementById('fallback-signin-options').style.display = 'block';
+        } else if (errorCode.includes('access_denied')) {
+          errorMessage = 'アクセスが拒否されました。別のアカウントでお試しください。';
+        } else {
+          errorMessage = `Google認証に失敗しました: ${errorCode}`;
+          document.getElementById('fallback-signin-options').style.display = 'block';
+        }
+        
+        showError(errorMessage);
+      }
+      
+      // 代替サインイン方法を試す
+      function tryAlternativeSignIn() {
+        try {
+          // 新しいウィンドウでGoogleサインインページを開く
+          const authWindow = window.open('https://accounts.google.com/o/oauth2/auth' + 
+            '?client_id=50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com' +
+            '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
+            '&response_type=token' +
+            '&scope=email%20profile',
+            'googleAuthWindow',
+            'width=600,height=600');
+          
+          if (!authWindow) {
+            showError('ポップアップウィンドウが開けませんでした。ポップアップブロックを無効にしてください。');
+          } else {
+            showLoading();
+            // メッセージを変更
+            document.getElementById('loading-view').querySelector('p').textContent = 
+              'Googleアカウントへのログインをお願いします...';
+          }
+        } catch (e) {
+          console.error('代替サインイン実行エラー:', e);
+          showError('代替サインインの実行に失敗しました: ' + e.message);
         }
       }
       
