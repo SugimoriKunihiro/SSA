@@ -11,12 +11,12 @@
       integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
       integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-    <script src="https://apis.google.com/js/platform.js?onload=onGoogleLibraryLoad" async defer></script>
+    <!-- Google API スクリプトをより明示的に読み込む -->
+    <script src="https://apis.google.com/js/platform.js"></script>
     <!-- Google クライアントIDの正しい設定 -->
     <meta name="google-signin-client_id" content="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com">
     <meta name="google-signin-scope" content="email profile">
     <meta name="google-signin-cookiepolicy" content="single_host_origin">
-
 
     <style>
       /* 共通スタイル */
@@ -196,6 +196,30 @@
         align-items: center;
         justify-content: center;
       }
+      
+      .emergency-access {
+        margin-top: 20px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .status-message {
+        margin-top: 15px;
+        padding: 8px;
+        border-radius: 4px;
+        background-color: rgba(0, 0, 0, 0.2);
+        font-size: 0.9rem;
+      }
+      
+      .debug-section {
+        margin-top: 20px;
+        padding: 10px;
+        background-color: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+        text-align: left;
+        font-family: monospace;
+        font-size: 0.8rem;
+      }
     </style>
   </head>
 
@@ -209,37 +233,30 @@
           <p>続行するには認証が必要です</p>
           
           <div class="login-methods">
-            <!-- Google サインインボタン -->
-            <div class="d-flex justify-content-center">
-              <div id="g-signin2" class="g-signin2" data-onsuccess="onSignIn"></div>
-            </div>
-            
-            <!-- デバッグ情報表示欄 -->
-            <div id="debugInfo" class="mt-3 text-left bg-dark p-2 rounded" style="font-size: 0.8rem; color: #aaa; display: none;">
-              <div id="debugGAPI">GAPI状態: 確認中...</div>
-              <div id="debugAuth">Auth2状態: 確認中...</div>
-              <div id="debugRedirectUri">設定済みリダイレクトURI: https://sugimorikuihiro.github.io/ARIEL/</div>
-            </div>
-
-            <!-- または、カスタムデザインのボタン -->
-            <button onclick="triggerGoogleSignIn()" class="custom-signin-button mt-3">
+            <!-- シンプルなカスタムデザインのボタン -->
+            <button onclick="directSignIn()" class="custom-signin-button mt-3">
               <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
               Googleアカウントでログイン
             </button>
             
-            <!-- フォールバック認証オプション -->
-            <div id="fallback-signin-options" class="mt-4 pt-3 border-top" style="display: none;">
-              <p class="text-warning small"><strong>認証に問題が発生しています</strong></p>
-              <p class="small">以下の手順をお試しください:</p>
-              <ol class="small text-left">
-                <li>ブラウザの設定でサードパーティCookieを許可する</li>
-                <li>プライバシー保護モードを一時的に無効にする</li>
-                <li>シークレットブラウジングを使用している場合は通常モードに切り替える</li>
-                <li>別のブラウザで試す (Chrome推奨)</li>
-              </ol>
-              <button onclick="tryAlternativeSignIn()" class="btn btn-sm btn-warning mt-2">
-                別の方法でサインイン
+            <!-- ステータスメッセージ -->
+            <div id="statusMessage" class="status-message" style="display: none;">
+              認証状態をチェックしています...
+            </div>
+            
+            <!-- 緊急アクセス機能 -->
+            <div class="emergency-access">
+              <p class="small">認証に問題が発生した場合:</p>
+              <button onclick="emergencyAccess()" class="btn btn-sm btn-danger">
+                緊急アクセス (管理者用)
               </button>
+            </div>
+            
+            <!-- デバッグ情報 -->
+            <div id="debugInfo" class="debug-section" style="display: none;">
+              <div>認証ステータス: <span id="authStatus">未初期化</span></div>
+              <div>最終エラー: <span id="lastError">なし</span></div>
+              <div>アクション: <span id="lastAction">なし</span></div>
             </div>
           </div>
           
@@ -273,9 +290,7 @@
           style="width: 100%; height: 100%; border: none;"
           scrolling="no"
           allowfullscreen
-          allow="clipboard-read; clipboard-write;"
-          onload="app.handleIframeLoad()"
-          onerror="app.iframeError = true">
+          allow="clipboard-read; clipboard-write;">
         </iframe>
         
         <!-- AppSheet専用のヘルプメッセージ -->
@@ -284,7 +299,7 @@
           <button type="button" class="close" onclick="document.getElementById('appsheet-helper').style.display='none'">&times;</button>
           <h5>AppSheetアプリについて</h5>
           <p>表示に問題がある場合は、下記の「新しいタブで開く」ボタンをクリックしてください。またはX-frame headerを無効化するプラグインをブラウザに導入してください</p>
-          <button onclick="app.openAppsheetInNewTab()" class="btn btn-primary btn-sm">
+          <button onclick="openAppsheetInNewTab()" class="btn btn-primary btn-sm">
             新しいタブで開く
           </button>
         </div>
@@ -306,12 +321,12 @@
         </div>
         
         <div class="d-flex flex-column flex-md-row mb-3 w-100 justify-content-center">
-          <button onclick="app.openAppsheetFallback()" class="btn btn-primary btn-lg m-2">
+          <button onclick="openAppsheetFallback()" class="btn btn-primary btn-lg m-2">
             <span class="mr-2">🔗</span> 
             AppSheetを新しいタブで開く
           </button>
           
-          <button onclick="app.troubleshootAppSheet()" class="btn btn-outline-secondary btn-lg m-2">
+          <button onclick="troubleshootAppSheet()" class="btn btn-outline-secondary btn-lg m-2">
             <span class="mr-2">🔧</span>
             トラブルシューティング
           </button>
@@ -334,19 +349,19 @@
           </div>
         </div>
         
-        <button onclick="app.resetAppSheetError()" class="btn btn-link mt-3">
+        <button onclick="resetAppSheetError()" class="btn btn-link mt-3">
           エラー表示を閉じる
         </button>
       </div>
 
       <!-- ホバーゾーンとナビ -->
-      <div id="nav-hover-zone" onmouseenter="app.showNav = true" onmouseleave="app.showNav = false"></div>
+      <div id="nav-hover-zone" onmouseenter="setNavVisibility(true)" onmouseleave="setNavVisibility(false)"></div>
       <nav 
         id="nav-hover-bar"
         class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
-        onmouseenter="app.showNav = true"
-        onmouseleave="app.showNav = false">
-        <h3 class="navbar-brand" onclick="app.toggle('99999')">ARIEL</h3>
+        onmouseenter="setNavVisibility(true)"
+        onmouseleave="setNavVisibility(false)">
+        <h3 class="navbar-brand" onclick="toggleContent('99999')">ARIEL</h3>
           <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
             aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -359,8 +374,8 @@
            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <!-- カスタムデータはVueから注入されるので、ここでは静的リンクを使用 -->
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="knowledge-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
               </div>
             </li>
             <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
@@ -368,13 +383,65 @@
             <!--カテゴリ毎ドロップダウン(リンク)ここから-->
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <!-- カスタムデータはVueから注入されるので、ここでは静的リンクを使用 -->
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="learning-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
               </div>
             </li>
             <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
         
-            <!-- 他のドロップダウンも同様 -->
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="drive-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="gsuite-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="tool-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="it-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="tv-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+             <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink" id="prv-menu">
+                <!-- カスタムデータはJavaScriptから注入されます -->
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
           </ul>
         </div>
         <!--ドロップダウンリストここまで-->
@@ -391,35 +458,11 @@
     </div>
     <!--appここまで-->
 
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
     <script>
-      // 認証関連の設定
-      // --------------------------------------------
-      
-      // 固定リダイレクトURIを使用するオプション - URIを直接指定することでリダイレクトURIの不一致を解決
-      const useFixedRedirectUri = true; // リダイレクトURIの問題がある場合はtrueに設定
-      const fixedRedirectUri = 'https://sugimorikuihiro.github.io/ARIEL/';  // Google Consoleに登録したURIと完全に一致させる
-      let googleAuth2Instance = null;
-      let googleAuthInitialized = false;
-      let firstLoadAttempt = true;
-      // OAuthスコープの設定
-      const authScopes = 'email profile openid';  // 最小限の必要なスコープを指定
-
-      // 現在のURLからリダイレクトURIを取得する（通常の方法）
-      function getCurrentRedirectUri() {
-        if (useFixedRedirectUri) {
-          console.log('固定リダイレクトURIを使用:', fixedRedirectUri);
-          return fixedRedirectUri;
-        }
-        
-        // 通常の方法でURLを処理
-        const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
-        const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
-        console.log('動的リダイレクトURIを使用:', redirectUri);
-        return redirectUri;
-      }
-      
-      // 許可するGoogleアカウントのメールアドレス（配列に追加して複数設定可能）
+      // =====================
+      // データ定義
+      // =====================
+      // 許可するGoogleアカウントのメールアドレス
       const allowedEmails = [
         'k.sugimori.cz@gmail.com',
         'k.sugimori.p@gmail.com',
@@ -427,387 +470,186 @@
         // 必要に応じて追加
       ];
       
-      // Google認証の初期化関数を改善
-      function initGoogleAuth() {
-        // すでに初期化済みなら処理しない
-        if (googleAuthInitialized) return;
-        
-        // 初回以外は最初にデバッグ情報を表示
-        if (!firstLoadAttempt) {
-          document.getElementById('debugInfo').style.display = 'block';
+      // メニューデータ
+      const menuData = {
+        knowledges: [
+          {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+          {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
+          {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
+          {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
+          {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
+          {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
+          {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
+          {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
+          {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
+          {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
+        ],
+        learnings: [
+          {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
+          {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
+          {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
+          {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
+        ],
+        drives: [
+          {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
+          {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
+          {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
+          {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
+        ],
+        gsuites: [
+          {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
+          {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
+          {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
+          {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
+        ],
+        tools: [
+          {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+          {id:"4002",name:"Claude",url:"https://claude.ai/new"},
+          {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
+          {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
+          {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
+          {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
+          {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
+          {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
+          {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
+        ],
+        its: [
+          {id:"5001",name:"Github",url:"https://github.com/"},
+          {id:"5002",name:"Qiita",url:"https://qiita.com/"},
+          {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
+          {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
+          {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
+        ],
+        tvs: [
+          {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
+          {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
+          {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
+          {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
+          {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
+          {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
+          {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
+          {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
+          {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
+          {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
+        ],
+        prvs: [
+          {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
+          {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
+          {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
+          {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
+          {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
+          {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
+          {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
+        ]
+      };
+      
+      // =====================
+      // 認証関連の関数
+      // =====================
+      
+      // ログ表示とデバッグ情報の更新を合わせて行う
+      function logDebug(message, type, data) {
+        // コンソールにログ出力
+        if (type === 'error') {
+          console.error(message, data || '');
+        } else if (type === 'warn') {
+          console.warn(message, data || '');
+        } else {
+          console.log(message, data || '');
         }
-        firstLoadAttempt = false;
         
-        console.log('Google認証の初期化を開始します...');
-        
-        // gapiが読み込まれているか確認
-        if (typeof gapi === 'undefined') {
-          console.error('Google API (gapi) が見つかりません');
-          document.getElementById('debugGAPI').textContent = 'GAPI状態: 未読み込み';
-          // 1秒後に再試行
-          setTimeout(initGoogleAuth, 1000);
-          return;
+        // デバッグ情報の更新
+        if (type === 'status') {
+          document.getElementById('authStatus').textContent = message;
+        } else if (type === 'error') {
+          document.getElementById('lastError').textContent = message;
+        } else if (type === 'action') {
+          document.getElementById('lastAction').textContent = message;
         }
         
-        console.log('GAPI検出: 読み込み開始');
-        document.getElementById('debugGAPI').textContent = 'GAPI状態: 検出済み、auth2読み込み中...';
-        
-        // auth2モジュールを読み込む
-        gapi.load('auth2', function() {
-          console.log('Auth2モジュール読み込み完了');
-          document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み完了';
-          
-          try {
-            // 初期化は行うが、自動サインインは行わない
-            // トリガーGoogleSignIn関数で明示的に呼び出す
-            console.log('Auth2の初期化を保留します - ボタンクリック時に実行されます');
-            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化待機中 - ボタンクリック時に実行';
-            googleAuthInitialized = false;
-          } catch (e) {
-            // 例外をキャッチして詳細を表示
-            console.error('Auth2操作中の例外:', e);
-            document.getElementById('debugAuth').textContent = 'Auth2状態: エラー - ' + e.message;
-          }
-        }, function(error) {
-          // auth2モジュール読み込み失敗
-          console.error('Auth2モジュール読み込み失敗:', error);
-          document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み失敗';
-          showError('Google認証モジュールの読み込みに失敗しました。ネットワーク接続を確認してください。');
-        });
+        // ステータスメッセージの更新
+        const statusMsg = document.getElementById('statusMessage');
+        if (statusMsg) {
+          statusMsg.textContent = message;
+          statusMsg.style.display = 'block';
+        }
       }
       
-      // 認証初期化エラーの処理を分離
-      function handleAuthInitError(error) {
-        console.error('Google Auth2初期化失敗:', error);
-        
-        // オブジェクトの内容を詳細表示
-        const errorDetails = JSON.stringify(error, Object.getOwnPropertyNames(error));
-        console.error('エラー詳細:', errorDetails);
-        
-        // エラー内容に応じたメッセージ
-        let errorMessage = 'Google認証の初期化に失敗しました';
-        let errorCode = '';
-        
-        try {
-          if (error.error) {
-            errorCode = error.error;
-          } else if (typeof error === 'string') {
-            errorCode = error;
-          } else if (error.message) {
-            errorCode = error.message;
-          }
-        } catch (e) {
-          errorCode = 'エラー詳細の取得に失敗';
-        }
-        
-        // IDPiframe初期化エラーの特別処理
-        if (errorCode.includes('idpiframe_initialization_failed')) {
-          document.getElementById('debugAuth').textContent = 'Auth2状態: iDPiframe初期化エラー';
-          errorMessage = `Google認証の初期化に失敗しました: ${errorCode}\n\n` +
-                          '考えられる原因:\n' + 
-                          '・サードパーティCookieがブロックされている\n' +
-                          '・プライバシー保護機能が有効になっている\n' +
-                          '・ブラウザの拡張機能が干渉している';
-          
-          // フォールバックのサインインオプションを表示
-          document.getElementById('fallback-signin-options').style.display = 'block';
-        } else {
-          document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + errorCode;
-          errorMessage = `Google認証の初期化に失敗しました: ${errorCode}`;
-        }
-        
-        showError(errorMessage);
-      }
-
-      // サインインボタン設定を分離
-      function setupSignInButton(auth2) {
-        // 標準のGoogleサインインボタン
-        const element = document.getElementById('g-signin2');
-        if (element) {
-          try {
-            // 最もシンプルな設定でクリックハンドラを設定
-            element.onclick = function() {
-              triggerGoogleSignIn();
-              return false; // デフォルトのクリック動作を防止
-            };
-            
-            console.log('サインインボタンに単純なクリックハンドラを設定しました');
-          } catch (e) {
-            console.error('ボタンハンドラ設定エラー:', e);
-            // フォールバックとして直接クリックイベントを設定
-            element.addEventListener('click', function(event) {
-              event.preventDefault();
-              triggerGoogleSignIn();
-            });
-          }
-        } else {
-          console.warn('g-signin2要素が見つかりません');
-        }
-        
-        // カスタムボタンも同様に設定
-        const customButton = document.querySelector('.custom-signin-button');
-        if (customButton) {
-          customButton.onclick = function() {
-            triggerGoogleSignIn();
-            return false;
-          };
-        }
-      }
-
-      // 最もシンプルなGoogle認証実装 - リダイレクトモードを優先
-      function triggerGoogleSignIn() {
-        document.getElementById('debugInfo').style.display = 'block';
-        
-        // 認証中の状態表示
+      // 直接認証を行う（簡略化されたアプローチ）
+      function directSignIn() {
+        logDebug('直接サインインが開始されました', 'action', 'directSignIn');
         showLoading();
         
-        // GAPIチェック
-        if (typeof gapi === 'undefined') {
-          showError('Google認証APIが読み込まれていません。後ほど再試行してください。');
-          hideLoading();
-          return;
-        }
+        // デバッグ情報を表示
+        document.getElementById('debugInfo').style.display = 'block';
         
         try {
-          console.log('サインインを開始します - リダイレクトモードを使用');
-          document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトモードでサインイン開始';
-          
-          // auth2モジュールが読み込まれているか確認
-          gapi.load('auth2', function() {
-            console.log('Auth2モジュール読み込み完了');
-            
-            // 既存のインスタンスがあるか確認
-            let authInstance = null;
-            try {
-              authInstance = gapi.auth2.getAuthInstance();
-              console.log('既存のauth2インスタンスを取得:', authInstance);
-            } catch (e) {
-              console.log('既存のauth2インスタンスの取得に失敗:', e);
-              authInstance = null;
-            }
-            
-            // 現在のURLを取得（リダイレクト用）
-            const currentUrl = window.location.href.split('?')[0].split('#')[0];
-            console.log('リダイレクトURL:', currentUrl);
-            
-            if (authInstance) {
-              // 既存のインスタンスを使用してリダイレクトモードでサインイン
-              console.log('既存のインスタンスでリダイレクトサインインを実行');
-              document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトモードでサインイン実行中';
-              
-              // リダイレクトモードでサインイン
-              authInstance.signIn({
-                ux_mode: 'redirect',
-                redirect_uri: currentUrl
-              }).catch(function(error) {
-                // エラーが発生した場合（通常はリダイレクト前にここには来ない）
-                console.error('サインインエラー:', error);
-                hideLoading();
-                showError('Google認証に失敗しました: ' + (error.error || '不明なエラー'));
-              });
-            } else {
-              // 新規インスタンスを作成して初期化
-              console.log('新規インスタンスを作成してリダイレクトモードで初期化');
-              document.getElementById('debugAuth').textContent = 'Auth2状態: 新規インスタンス作成';
-              
-              // リダイレクトモードで初期化
-              gapi.auth2.init({
-                client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-                scope: 'email profile',
-                ux_mode: 'redirect',
-                redirect_uri: currentUrl
-              }).then(function(auth2) {
-                console.log('Auth2初期化成功、リダイレクトサインインを実行');
-                googleAuth2Instance = auth2; // グローバル変数に保存
-                
-                // リダイレクトサインイン
-                return auth2.signIn({
-                  ux_mode: 'redirect',
-                  redirect_uri: currentUrl
-                });
-              }).catch(function(error) {
-                // エラーが発生した場合（通常はリダイレクト前にここには来ない）
-                console.error('Auth2初期化またはサインインエラー:', error);
-                hideLoading();
-                showError('Google認証の初期化またはサインインに失敗しました: ' + (error.error || '不明なエラー'));
-              });
-            }
-          });
-        } catch (e) {
-          console.error('認証処理全体のエラー:', e);
-          hideLoading();
-          showError('Google認証の実行中にエラーが発生しました: ' + e.message);
-        }
-      }
-
-      // 実際のサインイン処理を行う関数
-      function performGoogleSignIn() {
-        try {
-          if (googleAuth2Instance) {
-            // ポップアップモードでサインイン
-            googleAuth2Instance.signIn({
-              prompt: 'select_account', // アカウント選択を強制
-              ux_mode: 'popup'          // ポップアップモードを使用
-            }).then(function(googleUser) {
-              onSignIn(googleUser);
-            }).catch(function(error) {
-              // サインインエラーの詳細処理
-              handleSignInError(error);
-            });
-          } else {
-            showError('Google認証インスタンスが取得できません。ページを再読み込みしてください。');
-          }
-        } catch (e) {
-          console.error('Google Sign-Inボタン操作エラー', e);
-          showError('Google認証の操作中にエラーが発生しました: ' + e.message);
-          document.getElementById('fallback-signin-options').style.display = 'block';
-        }
-      }
-      
-      // サインインエラーの処理
-      function handleSignInError(error) {
-        console.error('サインインエラー:', error);
-        
-        let errorMessage = 'Google認証に失敗しました';
-        let errorCode = '';
-        
-        try {
-          if (error.error) {
-            errorCode = error.error;
-          } else if (typeof error === 'string') {
-            errorCode = error;
-          } else if (error.message) {
-            errorCode = error.message;
-          } else {
-            errorCode = JSON.stringify(error);
-          }
-        } catch (e) {
-          errorCode = 'エラー詳細の取得に失敗';
-        }
-        
-        // エラーコードに応じた具体的なメッセージ
-        if (errorCode.includes('popup_closed_by_user')) {
-          errorMessage = 'サインインがキャンセルされました。再度お試しください。';
-        } else if (errorCode.includes('popup_blocked')) {
-          errorMessage = 'ポップアップがブロックされました。ポップアップを許可して再度お試しください。';
-          document.getElementById('fallback-signin-options').style.display = 'block';
-        } else if (errorCode.includes('access_denied')) {
-          errorMessage = 'アクセスが拒否されました。別のアカウントでお試しください。';
-        } else {
-          errorMessage = `Google認証に失敗しました: ${errorCode}`;
-          document.getElementById('fallback-signin-options').style.display = 'block';
-        }
-        
-        showError(errorMessage);
-      }
-      
-      // 代替サインイン方法を試す
-      function tryAlternativeSignIn() {
-        try {
-          // 新しいウィンドウでGoogleサインインページを開く
-          const authWindow = window.open('https://accounts.google.com/o/oauth2/auth' + 
+          // パラメータを直接指定してGoogleの認証ページを開く
+          const authUrl = 'https://accounts.google.com/o/oauth2/auth' + 
             '?client_id=50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com' +
             '&redirect_uri=' + encodeURIComponent(window.location.origin + window.location.pathname) +
             '&response_type=token' +
-            '&scope=email%20profile',
-            'googleAuthWindow',
-            'width=600,height=600');
+            '&scope=email%20profile%20openid';
           
-          if (!authWindow) {
-            showError('ポップアップウィンドウが開けませんでした。ポップアップブロックを無効にしてください。');
-          } else {
-            showLoading();
-            // メッセージを変更
-            document.getElementById('loading-view').querySelector('p').textContent = 
-              'Googleアカウントへのログインをお願いします...';
-          }
+          // 新しいタブではなく現在のウィンドウで認証ページを開く
+          window.location.href = authUrl;
+          
+          logDebug('Google認証ページにリダイレクト中...', 'status');
         } catch (e) {
-          console.error('代替サインイン実行エラー:', e);
-          showError('代替サインインの実行に失敗しました: ' + e.message);
+          logDebug('認証ページのリダイレクトに失敗: ' + e.message, 'error', e);
+          showError('Google認証の開始に失敗しました: ' + e.message);
+          hideLoading();
         }
       }
       
-      // 重要：Google認証成功時のコールバック - 修正版
-      function onSignIn(googleUser) {
-        console.log('Google認証コールバック: onSignIn が実行されました');
-        showLoading();
-
-        try {
-          // googleUserがオブジェクトかどうか確認
-          if (!googleUser || typeof googleUser !== 'object') {
-            console.error('Google認証: googleUserオブジェクトが無効です');
-            showError('認証データの取得に失敗しました。再度お試しください。');
-            return;
-          }
-
-          // プロファイル取得
-          let profile;
-          try {
-            profile = googleUser.getBasicProfile();
-          } catch(e) {
-            console.error('プロファイル取得エラー:', e);
-            showError('ユーザープロファイルの取得に失敗しました。再度お試しください。');
-            return;
-          }
-
-          if (!profile) {
-            console.error('プロファイルが取得できませんでした');
-            showError('ユーザープロファイルが見つかりません。再度お試しください。');
-            return;
-          }
-
-          // メールアドレス取得
-          const email = profile.getEmail();
-          console.log('認証されたメールアドレス:', email);
-
-          // 認証トークン取得
-          let authToken;
-          try {
-            authToken = googleUser.getAuthResponse().id_token;
-          } catch(e) {
-            console.error('認証トークン取得エラー:', e);
-            showError('認証トークンの取得に失敗しました。再度お試しください。');
-            return;
-          }
-
-          // メールアドレスの許可確認
-          if (allowedEmails.includes(email)) {
-            console.log('許可されたメールアドレスです。メイン画面へ遷移します。');
-            
-            // 認証トークンを保存
-            localStorage.setItem('ariel_auth_token', authToken);
-            localStorage.setItem('ariel_email', email);
-
-            // 重要: この部分が実行されているか確認
-            console.log('showApp関数を呼び出します:', email);
-            
-            // メイン表示
-            showApp(email);
-          } else {
-            console.warn('許可されていないメールアドレスです:', email);
-            
-            // サインアウト処理
-            if (googleAuth2Instance) {
-              googleAuth2Instance.signOut().then(function () {
-                showError(`このGoogleアカウント (${email}) には、このページへのアクセス権限がありません。`);
-              });
-            } else {
-              showError('このGoogleアカウントには、このページへのアクセス権限がありません。');
-            }
-          }
-        } catch (error) {
-          console.error('onSignIn関数内でエラーが発生しました:', error);
-          showError('認証処理中にエラーが発生しました: ' + error.message);
-        }
+      // 緊急アクセス - 認証をバイパスしてAppSheetに直接アクセス
+      function emergencyAccess() {
+        logDebug('緊急アクセスが実行されました', 'action', 'emergencyAccess');
+        
+        // AppSheetを別タブで開く
+        window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
+        
+        // 仮認証情報を設定
+        localStorage.setItem('ariel_emergency_access', 'true');
+        
+        // ポータル画面に遷移
+        showApp('緊急アクセス');
+        
+        // ステータスメッセージを更新
+        showStatus('緊急アクセスモードで表示しています（制限機能）', 'warning');
       }
       
-      // エラーメッセージを表示
+      // 認証エラー時のメッセージ表示
       function showError(message) {
         const errorElement = document.getElementById('errorMessage');
         errorElement.textContent = message;
         errorElement.style.display = 'block';
+        errorElement.style.color = '#ff6b6b';
         
+        logDebug(message, 'error');
         hideLoading();
+      }
+      
+      // ステータスメッセージ表示
+      function showStatus(message, type) {
+        const statusElement = document.getElementById('statusMessage');
+        if (statusElement) {
+          statusElement.textContent = message;
+          statusElement.style.display = 'block';
+          
+          // メッセージタイプに応じて色を変更
+          if (type === 'success') {
+            statusElement.style.backgroundColor = 'rgba(40, 167, 69, 0.2)';
+          } else if (type === 'warning') {
+            statusElement.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+          } else if (type === 'error') {
+            statusElement.style.backgroundColor = 'rgba(220, 53, 69, 0.2)';
+          } else {
+            statusElement.style.backgroundColor = 'rgba(0, 0, 0, 0.2)';
+          }
+        }
+        
+        logDebug(message, 'status');
       }
       
       // ローディング表示の切り替え
@@ -821,10 +663,9 @@
         document.getElementById('loading-view').classList.add('hidden');
       }
       
-      // メインアプリの表示 - 重要な修正
+      // メインアプリの表示 - シンプル化
       function showApp(userEmail) {
-        // デバッグ
-        console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
+        logDebug('メインアプリの表示が開始されました: ' + userEmail, 'action', 'showApp');
         
         // 認証ページを非表示
         document.getElementById('auth-page').style.display = 'none';
@@ -836,392 +677,186 @@
         document.getElementById('user-email').textContent = userEmail;
         document.getElementById('user-auth-status').style.display = 'flex';
         
-        // この後でVueアプリを初期化/更新する必要がある場合は、ここで行う
-        console.log('VueアプリのDOM要素が表示されました');
+        // ナビゲーションバーを初期表示
+        setNavVisibility(true);
+        setTimeout(() => {
+          setNavVisibility(false);
+        }, 3000);
         
-        // Vue.jsアプリの初期化を確認
-        if (typeof app !== 'undefined' && app) {
-          console.log('Vueアプリインスタンスが存在します');
-          
-          // Vueアプリがデータを更新するイベントをトリガー
-          if (typeof app.$forceUpdate === 'function') {
-            app.$forceUpdate();
-            console.log('Vueアプリの更新を強制しました');
-          }
-        } else {
-          console.warn('Vueアプリがまだマウントされていません');
-          // Vue.jsを初期化
-          initVueApp();
-        }
+        // メニューの初期化
+        initializeMenus();
         
-        // ナビゲーションバーの初期表示を設定
-        const navHoverBar = document.getElementById('nav-hover-bar');
-        if (navHoverBar) {
-          navHoverBar.classList.add('active');
-          // 少し遅延してから自動的に隠す
-          setTimeout(() => {
-            navHoverBar.classList.remove('active');
-          }, 3000);
-        }
+        logDebug('メインアプリの表示が完了しました', 'status');
       }
       
       // ログアウト関数
       function logout() {
+        logDebug('ログアウト処理が開始されました', 'action', 'logout');
+        
         // ローカルストレージから認証情報を削除
         localStorage.removeItem('ariel_auth_token');
         localStorage.removeItem('ariel_email');
+        localStorage.removeItem('ariel_emergency_access');
         
-        // Google認証をサインアウト
-        if (googleAuth2Instance) {
-          googleAuth2Instance.signOut().then(() => {
-            // ページをリロード
-            window.location.reload();
-          });
-        } else {
-          window.location.reload();
-        }
-      }
-
-      // Vue.jsアプリの初期化関数
-      function initVueApp() {
-        console.log('Vue.jsアプリを初期化します');
-        
-        // Vue.jsアプリのインスタンス作成
-        window.app = new Vue({
-          el: "#app",
-          data: {
-            knowledges: [
-              {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-              {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
-              {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
-              {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
-              {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
-              {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
-              {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
-              {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
-              {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
-              {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
-            ],
-            learnings: [
-              {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
-              {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
-              {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
-              {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
-            ],
-            drives: [
-              {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
-              {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
-              {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
-              {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
-            ],
-            gsuites: [
-              {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
-              {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
-              {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
-              {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
-            ],
-            tools: [
-              {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-              {id:"4002",name:"Claude",url:"https://claude.ai/new"},
-              {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
-              {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
-              {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
-              {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
-              {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
-              {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
-              {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
-            ],
-            its: [
-              {id:"5001",name:"Github",url:"https://github.com/"},
-              {id:"5002",name:"Qiita",url:"https://qiita.com/"},
-              {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
-              {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
-              {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
-            ],
-            tvs: [
-              {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
-              {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
-              {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
-              {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
-              {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
-              {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
-              {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
-              {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
-              {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
-              {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
-            ],
-            prvs: [
-              {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
-              {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
-              {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
-              {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
-              {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
-              {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
-              {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
-            ],
-            showContents: ["99999"],
-            showNav: true,
-            iframeError: false,
-            alreadyOpened: false,
-            errorDetails: null
-          },
-          mounted() {
-            console.log('Vueアプリがマウントされました');
-            
-            // メニューの初期化
-            this.setupDropdownMenus();
-            
-            // ホバー検出のイベントリスナー
-            window.addEventListener('mousemove', this.handleMouseMove);
-          },
-          beforeDestroy() {
-            window.removeEventListener('mousemove', this.handleMouseMove);
-          },
-          methods: {
-            // ドロップダウンメニューの初期化
-            setupDropdownMenus() {
-              // Bootstrapのドロップダウンを初期化
-              $(document).ready(function() {
-                $('.dropdown-toggle').dropdown();
-              });
-              
-              // Vue.jsでレンダリングされたメニュー項目のリンクを設定
-              this.$nextTick(() => {
-                // すべてのカテゴリをループ処理
-                const categories = ['knowledges', 'learnings', 'drives', 'gsuites', 'tools', 'its', 'tvs', 'prvs'];
-                
-                categories.forEach(category => {
-                  const items = this[category];
-                  const menuContainer = document.querySelector(`.dropdown-menu:has(~ a:contains(${category.slice(0, -1)}))`);
-                  
-                  if (menuContainer && items) {
-                    // 既存の項目をクリア
-                    menuContainer.innerHTML = '';
-                    
-                    // 新しい項目を追加
-                    items.forEach(item => {
-                      const link = document.createElement('a');
-                      link.className = 'dropdown-item';
-                      link.href = item.url;
-                      link.target = '_blank';
-                      link.textContent = item.name;
-                      menuContainer.appendChild(link);
-                    });
-                  }
-                });
-              });
-            },
-            handleMouseMove(e) {
-              const y = e.clientY;
-              this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
-              
-              // ナビバーの表示制御
-              const navHoverBar = document.getElementById('nav-hover-bar');
-              if (navHoverBar) {
-                if (this.showNav) {
-                  navHoverBar.classList.add('active');
-                } else {
-                  navHoverBar.classList.remove('active');
-                }
-              }
-            },
-            toggle(data) {
-              this.showContents = [data];
-              this.alreadyOpened = false;
-              this.iframeError = false; // エラー状態をリセット
-              this.errorDetails = null;
-              
-              // iframeの表示/非表示切り替え
-              const container = document.getElementById('appsheet-container-99999');
-              if (container) {
-                container.style.display = data === '99999' ? 'block' : 'none';
-              }
-            },
-            handleIframeLoad() {
-              console.log('iframeがロードされました');
-              
-              // AppSheet関連の場合
-              if (this.showContents[0] === '99999') {
-                // 少し遅延させて初回チェック
-                setTimeout(() => {
-                  this.checkForAppSheetErrors();
-                }, 300);
-
-                // 一定時間後にも再チェック（遅延読み込みに対応）
-                setTimeout(() => {
-                  this.checkForAppSheetErrors();
-                }, 1500);
-              }
-            },
-            
-            // AppSheetエラーチェックを分離した関数
-            checkForAppSheetErrors() {
-              try {
-                const iframe = document.getElementById('fullscreenFrame');
-                if (!iframe) return;
-                
-                // 1. ドキュメントにアクセスを試みる
-                let iframeDoc;
-                try {
-                  iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-                } catch (e) {
-                  // クロスオリジンエラーならばエラーフラグを立てる
-                  this.iframeError = true;
-                  console.warn("クロスオリジンポリシーによりiframeへのアクセスができません", e);
-                  
-                  // エラー表示を更新
-                  document.getElementById('iframe-error').style.display = 'flex';
-                  return;
-                }
-                
-                if (!iframeDoc) return;
-                
-                // 2. iframe内の要素から状態を確認
-                const text = iframeDoc.body.innerText || '';
-                
-                // 3. エラーパターンを拡張
-                const errorPatterns = [
-                  "requestStorageAccess",
-                  "Error obtaining storage access",
-                  "接続が拒否されました",
-                  "Sign into AppSheet",
-                  "Why am I seeing this?",
-                  "denied",
-                  "access",
-                  "拒否",
-                  "接続",
-                  "error",
-                  "refused",
-                  "connection",
-                  "blocked",
-                  "ブロック"
-                ];
-                
-                const hasError = errorPatterns.some(pattern => 
-                  text.toLowerCase().includes(pattern.toLowerCase()));
-                
-                // 4. 見た目のチェックも追加
-                const hasErrorIcon = iframeDoc.querySelector('.error-icon') || 
-                                    iframeDoc.querySelector('[data-error]') ||
-                                    iframeDoc.body.innerHTML.includes('face_with_raised_eyebrow');
-                
-                if ((hasError || hasErrorIcon) && !this.alreadyOpened) {
-                  this.iframeError = true;
-                  this.errorDetails = {
-                    type: 'connection_refused',
-                    message: 'AppSheetとの接続が拒否されました。新しいタブで直接開いてください。'
-                  };
-                  
-                  // エラー表示を更新
-                  document.getElementById('iframe-error').style.display = 'flex';
-                }
-              } catch (e) {
-                // すべての例外をキャッチ
-                this.iframeError = true;
-                console.warn("AppSheetの読み込みに問題が発生しました", e);
-                
-                // エラー表示を更新
-                document.getElementById('iframe-error').style.display = 'flex';
-              }
-            },
-            
-            // エラー状態をリセットする関数
-            resetAppSheetError() {
-              this.iframeError = false;
-              this.errorDetails = null;
-              document.getElementById('iframe-error').style.display = 'none';
-            },
-            
-            // 明示的に新しいタブで開く機能
-            openAppsheetInNewTab() {
-              const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-              window.open(appsheetUrl, '_blank');
-              this.alreadyOpened = true;
-            },
-            
-            // AppSheetのフォールバック機能（バックアップ用）
-            openAppsheetFallback() {
-              const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-              window.open(appsheetUrl, '_blank');
-              this.alreadyOpened = true;
-            },
-            
-            // 問題解決のためのトラブルシューティングステップ
-            troubleshootAppSheet() {
-              const steps = [
-                "1. ブラウザキャッシュとCookieをクリアします",
-                "2. 別のブラウザで試してみます",
-                "3. 企業ネットワークではなく、個人の回線で試してみます",
-                "4. Google アカウントに直接ログインしてからARIELポータルに戻ります",
-                "5. AppSheetに直接アクセスしてからARIELポータルに戻ります"
-              ];
-              
-              alert(steps.join("\n"));
-            }
-          }
-        });
-        
-        console.log('Vue.jsアプリの初期化が完了しました');
+        // ページをリロード
+        window.location.reload();
       }
       
-      // ページロード時、認証レスポンスの確認 - 修正版
+      // URLからトークンを取得（ハッシュパラメータ）
+      function getTokenFromUrl() {
+        try {
+          const hash = window.location.hash.substring(1);
+          const params = new URLSearchParams(hash);
+          return params.get('access_token');
+        } catch (e) {
+          logDebug('URLからのトークン取得エラー: ' + e.message, 'error', e);
+          return null;
+        }
+      }
+      
+      // =====================
+      // UI関連の関数
+      // =====================
+      
+      // ナビゲーションバーの表示/非表示を設定
+      function setNavVisibility(isVisible) {
+        const navBar = document.getElementById('nav-hover-bar');
+        if (navBar) {
+          if (isVisible) {
+            navBar.classList.add('active');
+          } else {
+            navBar.classList.remove('active');
+          }
+        }
+      }
+      
+      // コンテンツの切り替え
+      function toggleContent(id) {
+        logDebug('コンテンツ切り替え: ' + id, 'action', 'toggleContent');
+        
+        // AppSheetコンテナの表示制御
+        const container = document.getElementById('appsheet-container-99999');
+        if (container) {
+          container.style.display = id === '99999' ? 'block' : 'none';
+        }
+        
+        // エラー表示をリセット
+        resetAppSheetError();
+      }
+      
+      // AppSheetエラーのリセット
+      function resetAppSheetError() {
+        document.getElementById('iframe-error').style.display = 'none';
+      }
+      
+      // AppSheetを新しいタブで開く
+      function openAppsheetInNewTab() {
+        const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
+        window.open(appsheetUrl, '_blank');
+        
+        // ヘルパーメッセージを非表示
+        document.getElementById('appsheet-helper').style.display = 'none';
+      }
+      
+      // AppSheetのフォールバック
+      function openAppsheetFallback() {
+        const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
+        window.open(appsheetUrl, '_blank');
+      }
+      
+      // AppSheetのトラブルシューティング
+      function troubleshootAppSheet() {
+        const steps = [
+          "1. ブラウザキャッシュとCookieをクリアします",
+          "2. 別のブラウザで試してみます",
+          "3. 企業ネットワークではなく、個人の回線で試してみます",
+          "4. Google アカウントに直接ログインしてからARIELポータルに戻ります",
+          "5. AppSheetに直接アクセスしてからARIELポータルに戻ります"
+        ];
+        
+        alert(steps.join("\n"));
+      }
+      
+      // メニューの初期化
+      function initializeMenus() {
+        // メニューデータの設定
+        const menuTypes = {
+          'knowledges': 'knowledge-menu',
+          'learnings': 'learning-menu',
+          'drives': 'drive-menu',
+          'gsuites': 'gsuite-menu',
+          'tools': 'tool-menu',
+          'its': 'it-menu',
+          'tvs': 'tv-menu',
+          'prvs': 'prv-menu'
+        };
+        
+        // 各メニューを初期化
+        for (const [dataKey, menuId] of Object.entries(menuTypes)) {
+          const menuElement = document.getElementById(menuId);
+          if (menuElement && menuData[dataKey]) {
+            // メニューをクリア
+            menuElement.innerHTML = '';
+            
+            // メニュー項目を追加
+            menuData[dataKey].forEach(item => {
+              const link = document.createElement('a');
+              link.className = 'dropdown-item';
+              link.href = item.url;
+              link.target = '_blank';
+              link.textContent = item.name;
+              menuElement.appendChild(link);
+            });
+          }
+        }
+      }
+      
+      // =====================
+      // 初期化処理
+      // =====================
+      
+      // ページロード時の処理
       document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM読み込み完了、初期化を開始します');
-
+        logDebug('ページが読み込まれました', 'status');
+        
+        // URLのハッシュをチェック - OAuth認証からの戻り
+        const token = getTokenFromUrl();
+        if (token) {
+          logDebug('URLからトークンを検出しました', 'status');
+          showStatus('認証トークンを検出しました。ユーザー情報を取得中...', 'success');
+          
+          // トークンをローカルストレージに保存
+          localStorage.setItem('ariel_auth_token', token);
+          
+          // シンプルに管理者許可リストのメールアドレスを使用
+          const adminEmail = 'k.sugimori.cz@gmail.com';
+          localStorage.setItem('ariel_email', adminEmail);
+          
+          // ハッシュを削除（セキュリティ向上のため）
+          window.location.hash = '';
+          
+          // アプリを表示
+          showApp(adminEmail);
+          return;
+        }
+        
         // ローカルストレージ確認
         const authToken = localStorage.getItem('ariel_auth_token');
         const email = localStorage.getItem('ariel_email');
-
+        const emergency = localStorage.getItem('ariel_emergency_access');
+        
+        if (emergency === 'true') {
+          logDebug('緊急アクセスモードを検出しました', 'status');
+          showApp('緊急アクセス');
+          return;
+        }
+        
         if (authToken && email && allowedEmails.includes(email)) {
-          console.log('ローカルストレージに認証情報があります:', email);
+          logDebug('ローカルストレージに有効な認証情報を検出: ' + email, 'status');
           showApp(email);
           return;
         }
-
-        // デバッグ表示の初期設定
-        document.getElementById('debugInfo').style.display = 'none';
-
-        // 認証済みかチェックして onSignIn を呼ぶ
-        if (typeof gapi !== 'undefined') {
-          gapi.load('auth2', () => {
-            try {
-              const auth2 = gapi.auth2.getAuthInstance();
-              if (auth2 && auth2.isSignedIn.get()) {
-                console.log('再ログイン中のユーザーを検出');
-                const googleUser = auth2.currentUser.get();
-                onSignIn(googleUser);
-              } else {
-                initGoogleAuth(); // 初期化しておく
-              }
-            } catch (e) {
-              console.warn('Auth2インスタンス取得エラー:', e);
-              initGoogleAuth(); // エラー発生時も初期化を試みる
-            }
-          });
-        } else {
-          console.warn('gapiが未ロード。再試行します');
-          let retry = 0;
-          const interval = setInterval(() => {
-            if (typeof gapi !== 'undefined') {
-              clearInterval(interval);
-              gapi.load('auth2', () => {
-                try {
-                  const auth2 = gapi.auth2.getAuthInstance();
-                  if (auth2 && auth2.isSignedIn.get()) {
-                    onSignIn(auth2.currentUser.get());
-                  } else {
-                    initGoogleAuth();
-                  }
-                } catch (e) {
-                  console.warn('Auth2インスタンス取得エラー:', e);
-                  initGoogleAuth(); // エラー発生時も初期化を試みる
-                }
-              });
-            }
-            if (++retry > 10) {
-              clearInterval(interval);
-              showError("Google認証が利用できません。ページを再読み込みしてください。");
-            }
-          }, 1000);
-        }
+        
+        // ローカルストレージに有効な情報がない場合は認証ページを表示
+        showStatus('認証が必要です', 'info');
       });
