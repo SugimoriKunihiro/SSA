@@ -39,7 +39,7 @@
         left: 0;
         width: 100vw;
         height: 100vh;
-        z-index: 1;
+        z-index: 200;
       }
 
       .fullscreen-appsheet iframe {
@@ -318,7 +318,7 @@
     </div>
 
     <!-- メインアプリ -->
-    <div id="app">
+    <div id="app" v-show="isAppVisible">
       <!-- ホバーゾーンとナビ - 元の動作を維持 -->
       <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
       <nav 
@@ -419,6 +419,7 @@
           <iframe
             src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
             id="appsheetFrame"
+            ref="fullscreenFrame" <!-- ←これがないとVueの参照が壊れます -->
             :style="{
               width: '100%',
               height: '100%',
@@ -631,6 +632,7 @@
           ],
           showContents:["99999"],
           showNav: true,
+          isAppVisible: false,
           iframeError: false,
           alreadyOpened: false,
           tooltipMessage: '',
@@ -663,6 +665,34 @@
           window.removeEventListener('mousemove', this.handleMouseMove);
         },
         methods:{
+            showApp(userEmail) {
+            console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
+
+            // v-show によって #app を表示（display: none を避ける）
+            this.isAppVisible = true;
+
+            // 認証ページを非表示（認証UI）
+            const authPage = document.getElementById('auth-page');
+            if (authPage) {
+              authPage.style.display = 'none';
+            }
+
+            // ユーザー情報の表示（右上の認証済みバッジなど）
+            const emailElem = document.getElementById('user-email');
+            if (emailElem) {
+              emailElem.textContent = userEmail;
+            }
+
+            const statusElem = document.getElementById('user-auth-status');
+            if (statusElem) {
+              statusElem.style.display = 'flex';
+            }
+
+            // iframeの読み込み最適化（位置をスクロールするなど）
+            this.$nextTick(() => {
+              this.optimizeIframeDisplay();
+            });
+          },
           handleMouseMove(e) {
             const y = e.clientY;
             this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
