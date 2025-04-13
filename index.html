@@ -507,86 +507,21 @@
         console.log('GAPI検出: 読み込み開始');
         document.getElementById('debugGAPI').textContent = 'GAPI状態: 検出済み、auth2読み込み中...';
         
-        // リダイレクトURIを取得
-        const redirectUri = getCurrentRedirectUri();
-        console.log('使用するリダイレクトURI:', redirectUri);
-        document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトURI: ' + redirectUri;
-        
         // auth2モジュールを読み込む
         gapi.load('auth2', function() {
           console.log('Auth2モジュール読み込み完了');
           document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み完了';
           
           try {
-            // 既存のインスタンスをチェック - ここが重要な修正ポイント
-            let auth2 = null;
-            try {
-              auth2 = gapi.auth2.getAuthInstance();
-              console.log('既存のauth2インスタンスを取得しました');
-              document.getElementById('debugAuth').textContent = 'Auth2状態: 既存インスタンスを使用';
-            } catch (e) {
-              console.log('既存のauth2インスタンスはありません:', e);
-              auth2 = null;
-            }
-            
-            if (auth2) {
-              // 既存のインスタンスを使用
-              googleAuth2Instance = auth2;
-              googleAuthInitialized = true;
-              
-              console.log('既存のGoogle Auth2インスタンスを使用します');
-              
-              // サインインボタンの設定
-              setupSignInButton(auth2);
-              
-              // すでにサインインしているかチェック
-              if (auth2.isSignedIn.get()) {
-                const googleUser = auth2.currentUser.get();
-                onSignIn(googleUser);
-              }
-            } else {
-              // 新規インスタンスを作成
-              const authConfig = {
-                client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-                cookiepolicy: 'single_host_origin',
-                scope: authScopes, // スコープを明示的に指定
-                // 基本設定
-                fetch_basic_profile: true, // 基本プロフィール取得を有効化
-              };
-              
-              // リダイレクトモード設定
-              if (useFixedRedirectUri) {
-                authConfig.ux_mode = 'redirect';
-                authConfig.redirect_uri = redirectUri;
-              }
-              
-              console.log('認証設定:', authConfig);
-              
-              gapi.auth2.init(authConfig).then(function(auth2) {
-                // 初期化成功、グローバル変数に保存
-                googleAuth2Instance = auth2;
-                googleAuthInitialized = true;
-                
-                console.log('Google Auth2初期化成功');
-                document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
-                
-                // サインインボタンの設定
-                setupSignInButton(auth2);
-                
-                // すでにサインインしているかチェック
-                if (auth2.isSignedIn.get()) {
-                  const googleUser = auth2.currentUser.get();
-                  onSignIn(googleUser);
-                }
-              }).catch(function(error) {
-                // 初期化失敗時の詳細エラー処理
-                handleAuthInitError(error);
-              });
-            }
+            // 初期化は行うが、自動サインインは行わない
+            // トリガーGoogleSignIn関数で明示的に呼び出す
+            console.log('Auth2の初期化を保留します - ボタンクリック時に実行されます');
+            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化待機中 - ボタンクリック時に実行';
+            googleAuthInitialized = false;
           } catch (e) {
             // 例外をキャッチして詳細を表示
             console.error('Auth2操作中の例外:', e);
-            handleAuthInitError(e);
+            document.getElementById('debugAuth').textContent = 'Auth2状態: エラー - ' + e.message;
           }
         }, function(error) {
           // auth2モジュール読み込み失敗
@@ -645,40 +580,36 @@
         const element = document.getElementById('g-signin2');
         if (element) {
           try {
-            // 固定または動的リダイレクトURIを取得
-            const redirectUri = getCurrentRedirectUri();
-            
-            // ボタンクリック時のオプション
-            const signInOptions = {
-              prompt: 'select_account'  // アカウント選択画面を表示
+            // 最もシンプルな設定でクリックハンドラを設定
+            element.onclick = function() {
+              triggerGoogleSignIn();
+              return false; // デフォルトのクリック動作を防止
             };
             
-            // リダイレクトモードの場合のみリダイレクトURIを設定
-            if (useFixedRedirectUri) {
-              signInOptions.ux_mode = 'redirect';
-              signInOptions.redirect_uri = redirectUri;
-            }
-            
-            auth2.attachClickHandler(element, signInOptions,
-            function(googleUser) {
-              onSignIn(googleUser);
-            },
-            function(error) {
-              console.error('Sign-in error', error);
-              handleSignInError(error);
-            });
-            console.log('サインインボタンにハンドラを設定しました');
-            console.log('ボタン用サインインオプション:', signInOptions);
-            document.getElementById('debugAuth').textContent = 'Auth2状態: ボタン設定完了、リダイレクトURI: ' + (signInOptions.redirect_uri || 'なし（ポップアップモード）');
+            console.log('サインインボタンに単純なクリックハンドラを設定しました');
           } catch (e) {
             console.error('ボタンハンドラ設定エラー:', e);
+            // フォールバックとして直接クリックイベントを設定
+            element.addEventListener('click', function(event) {
+              event.preventDefault();
+              triggerGoogleSignIn();
+            });
           }
         } else {
           console.warn('g-signin2要素が見つかりません');
         }
+        
+        // カスタムボタンも同様に設定
+        const customButton = document.querySelector('.custom-signin-button');
+        if (customButton) {
+          customButton.onclick = function() {
+            triggerGoogleSignIn();
+            return false;
+          };
+        }
       }
 
-      // Google サインインを手動でトリガーする関数を改善
+      // 最もシンプルなGoogle認証実装
       function triggerGoogleSignIn() {
         document.getElementById('debugInfo').style.display = 'block';
         
@@ -689,114 +620,42 @@
         }
         
         try {
-          // 固定または動的リダイレクトURIを取得
-          const redirectUri = getCurrentRedirectUri();
-          console.log('サインイントリガー - リダイレクトURI:', redirectUri);
-          document.getElementById('debugAuth').textContent = 'Auth2状態: サインイン開始、リダイレクトURI: ' + redirectUri;
+          console.log('最もシンプルな認証方法を試みます');
+          document.getElementById('debugAuth').textContent = 'Auth2状態: 最もシンプルな認証方法を使用';
           
-          // すでに初期化済みの認証インスタンスがあるか確認
-          let authInstance;
+          // 既存のインスタンスをクリア（もし存在すれば）
           try {
-            authInstance = gapi.auth2.getAuthInstance();
+            const existingAuth = gapi.auth2.getAuthInstance();
+            if (existingAuth) {
+              console.log('既存の認証インスタンスをリセットします');
+              // 特に何もしない、新しい設定で初期化する
+            }
           } catch (e) {
-            console.log('認証インスタンスがまだ存在しません。初期化を実行します。');
-            authInstance = null;
+            console.log('既存の認証インスタンスはありません');
           }
           
-          if (authInstance) {
-            // 既存のインスタンスを使用
-            googleAuth2Instance = authInstance;
-            googleAuthInitialized = true;
-            console.log('既存のGoogle Auth2インスタンスでサインインを実行します');
+          // 最もシンプルな初期化方法
+          gapi.auth2.init({
+            client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+            scope: 'email profile'
+          }).then(function(auth2) {
+            console.log('Auth2初期化成功、サインインを試みます');
             
-            // サインインオプションを設定
-            const signInOptions = {
-              prompt: 'select_account'
-            };
-            
-            // リダイレクトモードの場合はURIを設定
-            if (useFixedRedirectUri) {
-              signInOptions.ux_mode = 'redirect';
-              signInOptions.redirect_uri = redirectUri;
-            }
-            
-            // まずポップアップモードを試す
-            signInOptions.ux_mode = 'popup';
-            
-            // サインイン実行
-            authInstance.signIn(signInOptions).then(function(googleUser) {
+            // 最もシンプルなサインイン方法
+            auth2.signIn().then(function(googleUser) {
+              console.log('サインイン成功');
               onSignIn(googleUser);
             }).catch(function(error) {
-              console.error('ポップアップモードのサインインに失敗:', error);
-              
-              // ポップアップに失敗した場合、リダイレクトモードを試す
-              if (error.error === 'popup_blocked' || error.error === 'popup_closed_by_user') {
-                console.log('ポップアップがブロックされたため、リダイレクトモードを試行');
-                signInOptions.ux_mode = 'redirect';
-                signInOptions.redirect_uri = redirectUri;
-                
-                authInstance.signIn(signInOptions).then(function(googleUser) {
-                  onSignIn(googleUser);
-                }).catch(function(redirectError) {
-                  handleSignInError(redirectError);
-                });
-              } else {
-                handleSignInError(error);
-              }
+              console.error('サインインエラー:', error);
+              showError('Google認証に失敗しました: ' + (error.error || '不明なエラー'));
             });
-          } else {
-            // 初期化が必要
-            showError('Google認証の初期化を行います。少々お待ちください。');
-            
-            // 認証設定
-            const authConfig = {
-              client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-              cookiepolicy: 'single_host_origin',
-              scope: authScopes, // スコープを明示的に指定
-              fetch_basic_profile: true // 基本プロフィール取得を有効化
-            };
-            
-            // まずはポップアップモードで試す
-            gapi.auth2.init(authConfig).then(function(auth2) {
-              // 初期化成功、グローバル変数に保存
-              googleAuth2Instance = auth2;
-              googleAuthInitialized = true;
-              
-              console.log('Google Auth2初期化成功');
-              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
-              
-              // サインイン実行
-              const signInOptions = {
-                prompt: 'select_account'
-              };
-              
-              auth2.signIn(signInOptions).then(function(googleUser) {
-                onSignIn(googleUser);
-              }).catch(function(error) {
-                // ポップアップに失敗した場合、リダイレクトモードを試す
-                if (error.error === 'popup_blocked' || error.error === 'popup_closed_by_user') {
-                  console.log('ポップアップがブロックされたため、リダイレクトモードを試行');
-                  signInOptions.ux_mode = 'redirect';
-                  signInOptions.redirect_uri = redirectUri;
-                  
-                  auth2.signIn(signInOptions).then(function(googleUser) {
-                    onSignIn(googleUser);
-                  }).catch(function(redirectError) {
-                    handleSignInError(redirectError);
-                  });
-                } else {
-                  handleSignInError(error);
-                }
-              });
-            }).catch(function(error) {
-              // 初期化失敗時の詳細エラー処理
-              handleAuthInitError(error);
-            });
-          }
+          }).catch(function(error) {
+            console.error('Auth2初期化エラー:', error);
+            showError('Google認証の初期化に失敗しました: ' + (error.error || '不明なエラー'));
+          });
         } catch (e) {
-          console.error('サインイン実行エラー', e);
+          console.error('認証処理全体のエラー:', e);
           showError('Google認証の実行中にエラーが発生しました: ' + e.message);
-          document.getElementById('fallback-signin-options').style.display = 'block';
         }
       }
 
@@ -977,61 +836,47 @@
       
       // ページ読み込み時に認証状態をチェック
       document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM読み込み完了、初期化を開始します');
+        
+        // デバッグ情報を表示
+        document.getElementById('debugInfo').style.display = 'block';
+        
         // すでに認証済みかチェック
         const authToken = localStorage.getItem('ariel_auth_token');
         const email = localStorage.getItem('ariel_email');
         
         if (authToken && email) {
           // すでに認証済みならメインコンテンツを表示
+          console.log('ローカルストレージに認証情報があります');
           showApp(email);
         } else {
-          // 認証が必要な場合
+          console.log('認証が必要です');
           
-          // デバッグフラグ
-          const showDebug = new URLSearchParams(window.location.search).get('debug') === '1';
-          if (showDebug) {
-            document.getElementById('debugInfo').style.display = 'block';
-          }
-          
-          // インスタンスがあれば使用、なければ初期化
+          // auth2モジュールの読み込みだけ行う
           if (typeof gapi !== 'undefined') {
-            try {
-              // 既存のインスタンスを確認
-              gapi.load('auth2', function() {
-                try {
-                  const authInstance = gapi.auth2.getAuthInstance();
-                  if (authInstance) {
-                    console.log('既存のauth2インスタンスを検出しました');
-                    googleAuth2Instance = authInstance;
-                    googleAuthInitialized = true;
-                    setupSignInButton(authInstance);
-                  } else {
-                    initGoogleAuth();
-                  }
-                } catch (e) {
-                  console.log('新規初期化が必要です');
-                  initGoogleAuth();
-                }
-              });
-            } catch (e) {
-              console.log('auth2モジュールの読み込みが必要です');
-              initGoogleAuth();
-            }
+            gapi.load('auth2', function() {
+              console.log('Auth2モジュールが読み込まれました');
+              // ボタンのセットアップのみ行う
+              setupSignInButton();
+            });
           } else {
-            // ライブラリが読み込まれるのを待ってから初期化
+            // gapiが読み込まれるのを待つ
             const gapiCheckInterval = setInterval(function() {
               if (typeof gapi !== 'undefined') {
                 clearInterval(gapiCheckInterval);
-                initGoogleAuth();
+                gapi.load('auth2', function() {
+                  console.log('Auth2モジュールが読み込まれました');
+                  // ボタンのセットアップのみ行う
+                  setupSignInButton();
+                });
               }
-            }, 300);
+            }, 100);
             
-            // 長時間待っても読み込まれない場合
+            // タイムアウト
             setTimeout(function() {
               clearInterval(gapiCheckInterval);
               if (typeof gapi === 'undefined') {
-                document.getElementById('debugInfo').style.display = 'block';
-                document.getElementById('debugGAPI').textContent = 'GAPI状態: 読み込み失敗';
+                document.getElementById('debugGAPI').textContent = 'GAPI状態: 読み込み失敗（タイムアウト）';
                 showError('Google認証ライブラリの読み込みに失敗しました。ネットワーク接続を確認してください。');
               }
             }, 10000);
