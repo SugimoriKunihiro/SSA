@@ -3,6 +3,8 @@
   <head>
     <title>ARIEL</title>
     <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"    
       integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
@@ -50,6 +52,7 @@
         opacity: 0.95;
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         transition: opacity 0.3s ease;
+        z-index: 1000;
       }
       
       .appsheet-helper:hover {
@@ -233,6 +236,114 @@
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         width: 100%;
       }
+
+      /* iframeに関する追加スタイル */
+      .iframe-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+      }
+
+      .iframe-fix-tooltip {
+        position: absolute;
+        top: 60px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 5px;
+        z-index: 1000;
+        font-size: 14px;
+        width: auto;
+        max-width: 80%;
+        text-align: center;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        display: none;
+      }
+
+      .iframe-fix-tooltip.show {
+        display: block;
+        animation: fadeInOut 5s forwards;
+      }
+
+      @keyframes fadeInOut {
+        0% { opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+
+      /* iframeのオーバーレイ */
+      .iframe-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10;
+      }
+
+      .iframe-overlay-content {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        max-width: 500px;
+        width: 80%;
+        color: #333;
+        text-align: center;
+      }
+
+      .iframe-overlay-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+
+      .action-buttons {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 1000;
+      }
+
+      .action-button {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background-color: #007bff;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        font-size: 20px;
+        border: none;
+        transition: transform 0.3s, background-color 0.3s;
+      }
+
+      .action-button:hover {
+        transform: scale(1.1);
+        background-color: #0056b3;
+      }
+
+      .action-button.refresh {
+        background-color: #28a745;
+      }
+
+      .action-button.newtab {
+        background-color: #17a2b8;
+      }
     </style>
   </head>
 
@@ -305,82 +416,44 @@
 
       <!-- iframe全画面 -->
       <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
-        <iframe
-          src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
-          ref="fullscreenFrame"
-          :style="{
-            width: '100%',
-            height: '100%',
-            border: 'none',
-            pointerEvents: showNav ? 'none' : 'auto'
-          }"
-          scrolling="no"
-          allowfullscreen
-          allow="clipboard-read; clipboard-write;"
-          @load="handleIframeLoad"
-          @error="iframeError = true">
-        </iframe>
-        
-        <!-- AppSheet専用のヘルプメッセージ -->
-        <div v-if="!alreadyOpened" 
-             class="appsheet-helper alert alert-info m-3 position-absolute" 
-             style="top: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; z-index: 10;">
-          <button type="button" class="close" @click="alreadyOpened = true">&times;</button>
-          <h5>AppSheetアプリについて</h5>
-          <p>表示に問題がある場合は、下記の「新しいタブで開く」ボタンをクリックしてください。またはX-frame headerを無効化するプラグインをブラウザに導入してください</p>
-          <button @click="openAppsheetInNewTab" class="btn btn-primary btn-sm">
-            新しいタブで開く
-          </button>
-        </div>
-      </div>
-
-      <!-- エラー時の強化されたAppSheetリカバリーUI -->
-      <div v-if="iframeError" class="d-flex flex-column align-items-center my-4 p-3 bg-light rounded">
-        <div class="alert alert-danger mb-3 w-100" role="alert">
-          <h4 class="alert-heading">
-            <span class="mr-2">⚠️</span> 
-            AppSheetアプリの表示に問題が発生しています
-          </h4>
-          <p>サーバーへの接続が拒否されました。これには以下のような原因が考えられます：</p>
-          <ul>
-            <li>ネットワーク接続の問題（企業ネットワークの制限など）</li>
-            <li>AppSheetサービスへのアクセス権限の問題</li>
-            <li>ブラウザの認証情報やCookieの問題</li>
-          </ul>
-        </div>
-        
-        <div class="d-flex flex-column flex-md-row mb-3 w-100 justify-content-center">
-          <button @click="openAppsheetFallback" class="btn btn-primary btn-lg m-2">
-            <span class="mr-2">🔗</span> 
-            AppSheetを新しいタブで開く
-          </button>
+        <div class="iframe-container">
+          <iframe
+            id="appsheet-iframe"
+            ref="fullscreenFrame"
+            :src="appsheetUrl"
+            style="width: 100%; height: 100%; border: none;"
+            scrolling="yes"
+            allowfullscreen="true"
+            allow="fullscreen; clipboard-read; clipboard-write; accelerometer; autoplay; camera; microphone; geolocation;"
+            sandbox="allow-same-origin allow-scripts allow-forms allow-popups allow-top-navigation allow-modals"
+            @load="handleIframeLoad"
+            @error="handleIframeError">
+          </iframe>
           
-          <button @click="troubleshootAppSheet" class="btn btn-outline-secondary btn-lg m-2">
-            <span class="mr-2">🔧</span>
-            トラブルシューティング
-          </button>
-        </div>
-        
-        <small class="text-muted mb-2">※ ブラウザのポップアップブロックを許可してください</small>
-        
-        <div class="card w-100 mt-3">
-          <div class="card-header bg-info text-white">
-            さらに詳しい解決方法
-          </div>
-          <div class="card-body">
-            <ol>
-              <li>Google アカウントに直接ログインしていることを確認してください</li>
-              <li>ブラウザのシークレットモードや別のブラウザで試してみてください</li>
-              <li>ブラウザのキャッシュとCookieをクリアしてから再試行してください</li>
-              <li>企業ネットワークを使用している場合は、個人回線で試してみてください</li>
-              <li>直接 <a href="https://www.appsheet.com" target="_blank">AppSheet</a> にアクセスしてログインした後、このポータルに戻ってきてください</li>
-            </ol>
+          <!-- iframeのタイムアウトや読み込みエラーなどの問題時に表示するオーバーレイ -->
+          <div class="iframe-overlay" v-if="iframeError">
+            <div class="iframe-overlay-content">
+              <h4>AppSheetの読み込みに問題が発生しました</h4>
+              <p>以下のいずれかの方法をお試しください：</p>
+              <div class="iframe-overlay-buttons">
+                <button @click="reloadIframe" class="btn btn-primary">再読み込み</button>
+                <button @click="openAppsheetInNewTab" class="btn btn-info">新しいタブで開く</button>
+                <button @click="iframeError = false" class="btn btn-secondary">このメッセージを閉じる</button>
+              </div>
+            </div>
           </div>
         </div>
         
-        <button @click="resetAppSheetError" class="btn btn-link mt-3">
-          エラー表示を閉じる
-        </button>
+        <!-- ツールチップ -->
+        <div :class="['iframe-fix-tooltip', showTooltip ? 'show' : '']">
+          {{ tooltipMessage }}
+        </div>
+        
+        <!-- 固定アクションボタン -->
+        <div class="action-buttons">
+          <button @click="reloadIframe" class="action-button refresh" title="iframeを再読み込み">↻</button>
+          <button @click="openAppsheetInNewTab" class="action-button newtab" title="新しいタブで開く">↗</button>
+        </div>
       </div>
 
       <!-- ホバーゾーンとナビ -->
@@ -689,7 +762,11 @@
           showNav: true,
           iframeError: false,
           alreadyOpened: false,
-          errorDetails: null
+          tooltipMessage: '',
+          showTooltip: false,
+          appsheetUrl: 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b',
+          iframeLoadCount: 0,
+          iframeLoaded: false
         },
         watch: {
           showNav(newVal) {
@@ -701,6 +778,9 @@
         },
         mounted() {
           window.addEventListener('mousemove', this.handleMouseMove);
+          
+          // iframe表示の最適化
+          this.optimizeIframeDisplay();
         },
         beforeDestroy() {
           window.removeEventListener('mousemove', this.handleMouseMove);
@@ -713,117 +793,143 @@
           toggle: function(data) {
             this.showContents = [data];
             this.alreadyOpened = false;
-            this.iframeError = false; // エラー状態をリセット
-            this.errorDetails = null;
-          },
-          handleIframeLoad() {
-            // AppSheet関連の場合
-            if (this.showContents[0] === '99999') {
-              // 少し遅延させて初回チェック
-              setTimeout(() => {
-                this.checkForAppSheetErrors();
-              }, 300);
-
-              // 一定時間後にも再チェック（遅延読み込みに対応）
-              setTimeout(() => {
-                this.checkForAppSheetErrors();
-              }, 1500);
-            }
-          },
-          
-          // AppSheetエラーチェックを分離した関数
-          checkForAppSheetErrors() {
-            try {
-              const iframe = this.$refs.fullscreenFrame;
-              if (!iframe) return;
-              
-              // 1. ドキュメントにアクセスを試みる
-              let iframeDoc;
-              try {
-                iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-              } catch (e) {
-                // クロスオリジンエラーならばエラーフラグを立てる
-                this.iframeError = true;
-                console.warn("クロスオリジンポリシーによりiframeへのアクセスができません", e);
-                return;
-              }
-              
-              if (!iframeDoc) return;
-              
-              // 2. iframe内の要素から状態を確認
-              const text = iframeDoc.body.innerText || '';
-              
-              // 3. エラーパターンを拡張
-              const errorPatterns = [
-                "requestStorageAccess",
-                "Error obtaining storage access",
-                "接続が拒否されました",
-                "Sign into AppSheet",
-                "Why am I seeing this?",
-                "denied",
-                "access",
-                "拒否",
-                "接続",
-                "error",
-                "refused",
-                "connection",
-                "blocked",
-                "ブロック"
-              ];
-              
-              const hasError = errorPatterns.some(pattern => 
-                text.toLowerCase().includes(pattern.toLowerCase()));
-              
-              // 4. 見た目のチェックも追加
-              const hasErrorIcon = iframeDoc.querySelector('.error-icon') || 
-                                  iframeDoc.querySelector('[data-error]') ||
-                                  iframeDoc.body.innerHTML.includes('face_with_raised_eyebrow');
-              
-              if ((hasError || hasErrorIcon) && !this.alreadyOpened) {
-                this.iframeError = true;
-                this.errorDetails = {
-                  type: 'connection_refused',
-                  message: 'AppSheetとの接続が拒否されました。新しいタブで直接開いてください。'
-                };
-              }
-            } catch (e) {
-              // すべての例外をキャッチ
-              this.iframeError = true;
-              console.warn("AppSheetの読み込みに問題が発生しました", e);
-            }
-          },
-          
-          // エラー状態をリセットする関数
-          resetAppSheetError() {
             this.iframeError = false;
-            this.errorDetails = null;
-          },
-          
-          // 明示的に新しいタブで開く機能
-          openAppsheetInNewTab() {
-            const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-            window.open(appsheetUrl, '_blank');
-            this.alreadyOpened = true;
-          },
-          
-          // AppSheetのフォールバック機能（バックアップ用）
-          openAppsheetFallback() {
-            const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-            window.open(appsheetUrl, '_blank');
-            this.alreadyOpened = true;
-          },
-          
-          // 問題解決のためのトラブルシューティングステップ
-          troubleshootAppSheet() {
-            const steps = [
-              "1. ブラウザキャッシュとCookieをクリアします",
-              "2. 別のブラウザで試してみます",
-              "3. 企業ネットワークではなく、個人の回線で試してみます",
-              "4. Google アカウントに直接ログインしてから再試行してください",
-              "5. AppSheetに直接アクセスしてからこのポータルに戻ってきてください"
-            ];
             
-            alert(steps.join("\n"));
+            // iframe表示の最適化
+            this.$nextTick(() => {
+              this.optimizeIframeDisplay();
+            });
+          },
+          
+          // iframe表示の最適化
+          optimizeIframeDisplay() {
+            const iframe = document.getElementById('appsheet-iframe');
+            if (!iframe) return;
+            
+            // X-Frame-Optionsヘッダーを無視する拡張機能が機能しているか確認
+            // ここでは直接確認はできないので、ユーザーに通知します
+            this.showTooltip = true;
+            this.tooltipMessage = 'AppSheetを読み込んでいます...うまく表示されない場合は右下のボタンをご利用ください';
+            
+            setTimeout(() => {
+              this.showTooltip = false;
+            }, 5000);
+            
+            // ブラウザの全画面表示を促す
+            try {
+              // iframe要素がビューポート全体を占めるようにスタイルを調整
+              iframe.style.width = '100%';
+              iframe.style.height = '100%';
+              iframe.style.position = 'absolute';
+              iframe.style.top = '0';
+              iframe.style.left = '0';
+              
+              // iframeのcontentWindowにアクセスできるかチェック
+              setTimeout(() => {
+                try {
+                  const iframeWindow = iframe.contentWindow;
+                  if (iframeWindow && iframeWindow.document) {
+                    console.log('iframeのcontentWindowにアクセスできました');
+                  }
+                } catch (e) {
+                  console.warn('iframeのcontentWindowにアクセスできません:', e);
+                  // アクセスできない場合はエラーハンドリングをスキップ
+                }
+              }, 2000);
+            } catch (e) {
+              console.error('iframeの最適化中にエラーが発生しました:', e);
+            }
+          },
+          
+          // iframeのロードハンドラ
+          handleIframeLoad() {
+            console.log('iframeがロードされました');
+            this.iframeLoaded = true;
+            this.iframeLoadCount++;
+            
+            // 「Entire app must be in view」エラーメッセージが表示された場合の対応
+            const iframe = this.$refs.fullscreenFrame;
+            if (!iframe) return;
+            
+            // iframe全体が表示されるようスクロールを調整
+            try {
+              // iframeが画面内に完全に表示されるようスクロール位置を調整
+              window.scrollTo(0, 0);
+              
+              // iframe内のドキュメントにアクセスできるか試みる
+              setTimeout(() => {
+                try {
+                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                  const errorMessages = iframeDoc.querySelectorAll('div, p, span');
+                  
+                  // エラーメッセージが表示されているか確認
+                  let hasViewError = false;
+                  
+                  errorMessages.forEach(el => {
+                    if (el.textContent && el.textContent.includes('Entire app must be in view')) {
+                      hasViewError = true;
+                    }
+                  });
+                  
+                  if (hasViewError) {
+                    // エラーメッセージが見つかった場合、ヘルパーメッセージを表示
+                    this.showTooltip = true;
+                    this.tooltipMessage = 'アプリ全体が表示されていません。ブラウザを全画面表示にするか、新しいタブで開いてください。';
+                    
+                    setTimeout(() => {
+                      this.showTooltip = false;
+                    }, 10000);
+                  }
+                } catch (e) {
+                  // クロスオリジンポリシーによりアクセスできない場合はスキップ
+                  console.warn('iframeのcontentDocumentにアクセスできません:', e);
+                }
+              }, 1000);
+            } catch (e) {
+              console.error('iframeのロード後の処理でエラーが発生しました:', e);
+            }
+          },
+          
+          // iframeのエラーハンドラ
+          handleIframeError(e) {
+            console.error('iframeでエラーが発生しました:', e);
+            this.iframeError = true;
+          },
+          
+          // iframeを再読み込み
+          reloadIframe() {
+            // iframeのURL属性を再設定して強制的に再読み込み
+            const iframe = this.$refs.fullscreenFrame;
+            if (iframe) {
+              // 現在のURLに時間パラメータを付加して強制的にリロード
+              this.appsheetUrl = `https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b?reload=${Date.now()}`;
+              
+              // エラー状態をリセット
+              this.iframeError = false;
+              this.iframeLoaded = false;
+              
+              // ヘルパーメッセージを表示
+              this.showTooltip = true;
+              this.tooltipMessage = 'AppSheetを再読み込みしています...';
+              
+              setTimeout(() => {
+                this.showTooltip = false;
+              }, 5000);
+            }
+          },
+          
+          // AppSheetを新しいタブで開く
+          openAppsheetInNewTab() {
+            window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
+            this.alreadyOpened = true;
+            
+            // ヘルパーメッセージを表示
+            this.showTooltip = true;
+            this.tooltipMessage = 'AppSheetを新しいタブで開きました';
+            
+            setTimeout(() => {
+              this.showTooltip = false;
+            }, 3000);
           }
         }
       });
