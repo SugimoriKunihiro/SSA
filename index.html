@@ -424,10 +424,10 @@
       <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
 
       <!-- iframe全画面 - 参考コードの構造を採用 -->
-      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-if="showContents[0] === '99999'">
+      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
         <iframe
           src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
-          scrolling="yes"
+          scrolling="no"
           id="appsheetFrame"
           :style="{
             width: '100%',
@@ -674,7 +674,14 @@
           },
           handleIframeLoad() {
             console.log('iframeがロードされました');
-            
+
+            // AppSheetの表示位置調整を繰り返す
+            for (let i = 0; i < 5; i++) {
+              setTimeout(() => {
+                window.scrollTo(0, 0);
+                console.log(`scrollTo called (${i + 1})`);
+              }, 300 * (i + 1));
+            }
             // フレームが完全に読み込まれたことを通知
             this.showTooltip = true;
             this.tooltipMessage = 'AppSheetが読み込まれました';
