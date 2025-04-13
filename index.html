@@ -416,7 +416,7 @@
       <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
         <div id="iframe-container">
           <iframe
-            v-if="isAppVisible"
+            v-show="isAppVisible"
             :src="appsheetUrl"
             id="appsheet-iframe"
             ref="fullscreenFrame" <!-- ←これがないとVueの参照が壊れます -->
