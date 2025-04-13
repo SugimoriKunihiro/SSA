@@ -787,37 +787,33 @@
       // Google認証成功時のコールバック
       function onSignIn(googleUser) {
         showLoading();
-        
+
         try {
-          // ユーザープロフィール情報の取得
           const profile = googleUser.getBasicProfile();
           const email = profile.getEmail();
-          
+          const authToken = googleUser.getAuthResponse().id_token;
+
           console.log('Google認証成功: ' + email);
-          
-          // 許可リストにあるメールアドレスかチェック
+
           if (allowedEmails.includes(email)) {
-            // 認証成功：ローカルストレージに認証トークンを保存
-            const authToken = googleUser.getAuthResponse().id_token;
+            // 認証トークンを保存
             localStorage.setItem('ariel_auth_token', authToken);
             localStorage.setItem('ariel_email', email);
-            
-            // メインコンテンツを表示
-            setTimeout(() => {
-              showApp(email);
-            }, 1000);
+
+            // メイン表示
+            showApp(email);
           } else {
-            // 認証失敗
+            console.warn('許可されていないメールアドレスです:', email);
             if (googleAuth2Instance) {
-              googleAuth2Instance.signOut().then(function() {
-                showError(`このGoogleアカウント (${email}) には、このページへのアクセス権限がありません。`);
-              });
-            } else {
+              googleAuth2Instance.signOut().then(function () {
+              showError(`このGoogleアカウント (${email}) には、このページへのアクセス権限がありません。`);
+            });
+          } else {
               showError('このGoogleアカウントには、このページへのアクセス権限がありません。');
             }
           }
         } catch (error) {
-          console.error('プロフィール取得エラー', error);
+          console.error('プロフィール取得エラー:', error);
           showError('ユーザー情報の取得に失敗しました: ' + error.message);
         }
       }
@@ -890,81 +886,67 @@
           return;
         }
         
-        console.log('認証が必要です');
-        
-        // リダイレクト後の処理
-        // URLにリダイレクトパラメータがあるか確認
-        if (window.location.hash.includes('access_token') || 
-            window.location.search.includes('code=')) {
-          console.log('認証レスポンスを検出しました');
-          document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクト後の処理';
-          
-          // auth2モジュールの読み込み
-          if (typeof gapi !== 'undefined') {
-            gapi.load('auth2', function() {
-              try {
-                const auth2 = gapi.auth2.getAuthInstance();
-                if (auth2 && auth2.isSignedIn.get()) {
-                  // サインイン済みの場合
-                  const googleUser = auth2.currentUser.get();
-                  console.log('サインイン済みのユーザーを検出しました');
-                  onSignIn(googleUser);
-                } else {
-                  console.log('サインインユーザーが検出できませんでした');
-                  // ボタンのセットアップのみ行う
-                  setupSignInButton();
-                }
-              } catch (e) {
-                console.error('リダイレクト後の処理エラー:', e);
-                // ボタンのセットアップのみ行う
-                setupSignInButton();
-              }
-            });
-          } else {
-            // gapiが読み込まれるのを待つ
-            const gapiCheckInterval = setInterval(function() {
-              if (typeof gapi !== 'undefined') {
-                clearInterval(gapiCheckInterval);
-                gapi.load('auth2', function() {
-                  setupSignInButton();
-                });
-              }
-            }, 100);
+  // ページロード時、認証レスポンスの確認
+  document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOM読み込み完了、初期化を開始します');
+
+  // デバッグ情報を表示
+  document.getElementById('debugInfo').style.display = 'block';
+
+  const authToken = localStorage.getItem('ariel_auth_token');
+  const email = localStorage.getItem('ariel_email');
+
+  if (authToken && email) {
+    console.log('ローカルストレージに認証情報があります');
+    showApp(email);
+    return;
+  }
+
+  if (typeof gapi !== 'undefined') {
+    gapi.load('auth2', function () {
+      let auth2;
+      try {
+        auth2 = gapi.auth2.getAuthInstance();
+      } catch (e) {
+        console.error('auth2インスタンス取得失敗:', e);
+        return;
+      }
+
+      if (auth2 && auth2.isSignedIn.get()) {
+        console.log('既にログイン済みのユーザーがいます');
+        const googleUser = auth2.currentUser.get();
+        onSignIn(googleUser);
+      } else {
+        console.log('ログイン済みユーザーがいないため、サインインを試みます');
+        auth2.signIn().then(googleUser => {
+          onSignIn(googleUser);
+        }).catch(error => {
+          console.error('自動サインイン失敗:', error);
+        });
+      }
+    });
+  } else {
+    console.warn('gapiが未定義のため、10回まで再試行します');
+    let retry = 0;
+    const retryInterval = setInterval(() => {
+      if (typeof gapi !== 'undefined') {
+        clearInterval(retryInterval);
+        gapi.load('auth2', function () {
+          console.log('遅延読み込み後にauth2を初期化');
+          // 同じロジックを再実行
+          auth2 = gapi.auth2.getAuthInstance();
+          if (auth2 && auth2.isSignedIn.get()) {
+            onSignIn(auth2.currentUser.get());
           }
-        } else {
-          // 通常のページロード
-          // auth2モジュールの読み込みだけ行う
-          if (typeof gapi !== 'undefined') {
-            gapi.load('auth2', function() {
-              console.log('Auth2モジュールが読み込まれました');
-              // ボタンのセットアップのみ行う
-              setupSignInButton();
-            });
-          } else {
-            // gapiが読み込まれるのを待つ
-            const gapiCheckInterval = setInterval(function() {
-              if (typeof gapi !== 'undefined') {
-                clearInterval(gapiCheckInterval);
-                gapi.load('auth2', function() {
-                  console.log('Auth2モジュールが読み込まれました');
-                  // ボタンのセットアップのみ行う
-                  setupSignInButton();
-                });
-              }
-            }, 100);
-            
-            // タイムアウト
-            setTimeout(function() {
-              clearInterval(gapiCheckInterval);
-              if (typeof gapi === 'undefined') {
-                document.getElementById('debugGAPI').textContent = 'GAPI状態: 読み込み失敗（タイムアウト）';
-                showError('Google認証ライブラリの読み込みに失敗しました。ネットワーク接続を確認してください。');
-              }
-            }, 10000);
-          }
-        }
-      });
-      
+        });
+      }
+      if (++retry > 10) {
+        clearInterval(retryInterval);
+        showError('Google認証ライブラリの読み込みに失敗しました。再読み込みしてください。');
+      }
+    }, 1000);
+  }
+});   
       // Vue インスタンス作成
       var app = new Vue({
         el:"#app",
