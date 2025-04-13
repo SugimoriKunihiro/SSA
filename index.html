@@ -494,10 +494,11 @@
             gapi.auth2.init({
               client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
               cookiepolicy: 'single_host_origin',
-              // 追加オプション: 同一オリジンのiframeのみ使用
+              // 追加オプション: モードとスコープを明示的に設定
               ux_mode: 'popup',
-              // スコープを明示的に指定
-              scope: 'profile email'
+              scope: 'profile email',
+              // 現在のURLをホストとして許可するオプション
+              hosted_domain: window.location.origin
             }).then(function(auth2) {
               // 初期化成功、グローバル変数に保存
               googleAuth2Instance = auth2;
@@ -580,15 +581,18 @@
         const element = document.getElementById('g-signin2');
         if (element) {
           try {
-            auth2.attachClickHandler(element, {},
-              function(googleUser) {
-                onSignIn(googleUser);
-              },
-              function(error) {
-                console.error('Sign-in error', error);
-                showError('Google認証に失敗しました: ' + error.error);
-              }
-            );
+            auth2.attachClickHandler(element, {
+              // ボタンクリック時のオプション
+              prompt: 'select_account', // アカウント選択画面を表示
+              ux_mode: 'redirect'       // リダイレクトモードも試す
+            },
+            function(googleUser) {
+              onSignIn(googleUser);
+            },
+            function(error) {
+              console.error('Sign-in error', error);
+              handleSignInError(error);
+            });
             console.log('サインインボタンにハンドラを設定しました');
           } catch (e) {
             console.error('ボタンハンドラ設定エラー:', e);
