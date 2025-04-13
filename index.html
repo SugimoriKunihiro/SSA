@@ -14,6 +14,8 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
       integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <!-- Google Sign-In APIを追加 -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 
     <style>
       /* 共通スタイル */
@@ -214,6 +216,18 @@
       .tooltip-message.show {
         opacity: 1;
       }
+      
+      /* GoogleボタンコンテナのスタイルをカスタマイズするためのCSS */
+      .g-signin2-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+      }
+      
+      /* Googleのサインインボタンをカスタマイズ */
+      #googleSignInButton {
+        width: 100%;
+      }
     </style>
   </head>
 
@@ -227,16 +241,10 @@
           <p>続行するには認証が必要です</p>
           
           <div class="login-methods">
-            <!-- Google サインインボタン -->
-            <div class="d-flex justify-content-center">
-              <div id="g-signin2" class="g-signin2"></div>
+            <!-- Google サインインボタンコンテナ -->
+            <div class="g-signin2-container">
+              <div id="googleSignInButton"></div>
             </div>
-            
-            <!-- または、カスタムデザインのボタン -->
-            <button id="custom-signin-btn" class="custom-signin-button mt-3">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
-              Googleアカウントでログイン
-            </button>
           </div>
           
           <div id="errorMessage"></div>
@@ -380,6 +388,9 @@
     </div>
 
     <script>
+      // Google Client ID - 実際のGoogle Cloud Consoleから取得したIDに置き換える必要があります
+      const GOOGLE_CLIENT_ID = '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com';
+      
       // 許可するGoogleアカウントのメールアドレス
       const allowedEmails = [
         'k.sugimori.cz@gmail.com',
@@ -422,24 +433,41 @@
         }
       }
       
-      // Google認証処理を実行する関数
-      function handleGoogleAuth() {
-        console.log('Google認証が開始されました');
+      // Google認証成功時に呼び出される関数
+      function handleCredentialResponse(response) {
+        console.log('Google認証レスポンス:', response);
+        
+        // JWTトークンをデコードして内容を確認する
+        const token = response.credential;
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const payload = JSON.parse(jsonPayload);
+        console.log('デコードされたペイロード:', payload);
+        
+        // ユーザーのメールアドレスを取得
+        const email = payload.email;
         
         // ローディング表示
         showLoading();
         
-        // ここで実際のGoogle認証を行う代わりに、仮のデモとして最初のメールを使用
-        const email = allowedEmails[0];
-        
-        // 認証情報を保存
-        localStorage.setItem('ariel_email', email);
-        localStorage.setItem('ariel_auth_token', 'google_' + Date.now());
-        
-        // メイン画面表示
-        setTimeout(() => {
-          showApp(email);
-        }, 500);
+        // 認証されたメールアドレスが許可リストに含まれているか確認
+        if (allowedEmails.includes(email)) {
+          // 認証情報を保存
+          localStorage.setItem('ariel_email', email);
+          localStorage.setItem('ariel_auth_token', token);
+          
+          // メイン画面表示
+          setTimeout(() => {
+            showApp(email);
+          }, 500);
+        } else {
+          // 許可されていないメールアドレスの場合はエラーを表示
+          showError('このメールアドレスでのアクセスは許可されていません');
+        }
       }
       
       // ページ読み込み時に実行
@@ -450,15 +478,32 @@
         const email = localStorage.getItem('ariel_email');
         const token = localStorage.getItem('ariel_auth_token');
         
-        // Googleサインインボタンにイベントリスナーを設定
-        document.getElementById('custom-signin-btn').addEventListener('click', function() {
-          handleGoogleAuth();
-        });
-        
         // 認証済みかチェック
         if (email && token) {
           console.log('認証情報を検出: ', email);
           showApp(email);
+        } else {
+          // Googleサインインボタンを初期化
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse
+          });
+          
+          google.accounts.id.renderButton(
+            document.getElementById("googleSignInButton"),
+            { 
+              theme: "outline", 
+              size: "large",
+              type: "standard",
+              shape: "rectangular",
+              text: "signin_with",
+              logo_alignment: "left",
+              width: 280
+            }
+          );
+          
+          // ワンタップ自動サインインを表示
+          google.accounts.id.prompt();
         }
       });
       
@@ -631,6 +676,11 @@
             }, 3000);
           },
           logout() {
+            // Google認証をサインアウト
+            if (google && google.accounts && google.accounts.id) {
+              google.accounts.id.disableAutoSelect();
+            }
+            
             // ローカルストレージから認証情報を削除
             localStorage.removeItem('ariel_auth_token');
             localStorage.removeItem('ariel_email');
