@@ -11,9 +11,12 @@
       integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
       integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <script src="https://apis.google.com/js/platform.js?onload=onGoogleLibraryLoad" async defer></script>
     <!-- Google クライアントIDの正しい設定 -->
     <meta name="google-signin-client_id" content="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com">
+    <meta name="google-signin-scope" content="email profile">
+    <meta name="google-signin-cookiepolicy" content="single_host_origin">
+
 
     <style>
       /* 共通スタイル */
@@ -609,7 +612,7 @@
         }
       }
 
-      // 最もシンプルなGoogle認証実装
+      // 最もシンプルなGoogle認証実装 - 既存インスタンスを優先的に使用
       function triggerGoogleSignIn() {
         document.getElementById('debugInfo').style.display = 'block';
         
@@ -620,38 +623,59 @@
         }
         
         try {
-          console.log('最もシンプルな認証方法を試みます');
-          document.getElementById('debugAuth').textContent = 'Auth2状態: 最もシンプルな認証方法を使用';
+          console.log('サインインを開始します');
+          document.getElementById('debugAuth').textContent = 'Auth2状態: サインイン開始';
           
-          // 既存のインスタンスをクリア（もし存在すれば）
-          try {
-            const existingAuth = gapi.auth2.getAuthInstance();
-            if (existingAuth) {
-              console.log('既存の認証インスタンスをリセットします');
-              // 特に何もしない、新しい設定で初期化する
-            }
-          } catch (e) {
-            console.log('既存の認証インスタンスはありません');
-          }
-          
-          // 最もシンプルな初期化方法
-          gapi.auth2.init({
-            client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-            scope: 'email profile'
-          }).then(function(auth2) {
-            console.log('Auth2初期化成功、サインインを試みます');
+          // auth2モジュールが読み込まれているか確認
+          gapi.load('auth2', function() {
+            console.log('Auth2モジュール読み込み完了');
             
-            // 最もシンプルなサインイン方法
-            auth2.signIn().then(function(googleUser) {
-              console.log('サインイン成功');
-              onSignIn(googleUser);
-            }).catch(function(error) {
-              console.error('サインインエラー:', error);
-              showError('Google認証に失敗しました: ' + (error.error || '不明なエラー'));
-            });
-          }).catch(function(error) {
-            console.error('Auth2初期化エラー:', error);
-            showError('Google認証の初期化に失敗しました: ' + (error.error || '不明なエラー'));
+            // 既存のインスタンスがあるか確認
+            let authInstance = null;
+            try {
+              authInstance = gapi.auth2.getAuthInstance();
+              console.log('既存のauth2インスタンスを取得:', authInstance);
+            } catch (e) {
+              console.log('既存のauth2インスタンスの取得に失敗:', e);
+              authInstance = null;
+            }
+            
+            if (authInstance) {
+              // 既存のインスタンスを使用してサインイン
+              console.log('既存のインスタンスでサインインを実行');
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 既存インスタンスでサインイン';
+              
+              authInstance.signIn()
+                .then(function(googleUser) {
+                  console.log('サインイン成功');
+                  onSignIn(googleUser);
+                })
+                .catch(function(error) {
+                  console.error('サインインエラー:', error);
+                  showError('Google認証に失敗しました: ' + (error.error || '不明なエラー'));
+                });
+            } else {
+              // 新規インスタンスを作成
+              console.log('新規インスタンスを作成');
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 新規インスタンス作成';
+              
+              // 最小限の設定で初期化
+              gapi.auth2.init({
+                client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+                scope: 'email profile'
+              }).then(function(auth2) {
+                console.log('Auth2初期化成功');
+                
+                // サインイン実行
+                return auth2.signIn();
+              }).then(function(googleUser) {
+                console.log('サインイン成功');
+                onSignIn(googleUser);
+              }).catch(function(error) {
+                console.error('Auth2初期化またはサインインエラー:', error);
+                showError('Google認証の初期化またはサインインに失敗しました: ' + (error.error || '不明なエラー'));
+              });
+            }
           });
         } catch (e) {
           console.error('認証処理全体のエラー:', e);
