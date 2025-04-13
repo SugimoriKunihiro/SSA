@@ -11,12 +11,25 @@
       integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
       integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
+    <!-- 実際の使用時はあなた自身のクライアントIDに置き換えてください -->
+    <meta name="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4" content="50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com">
 
     <style>
-      html, body, #app {
+      /* 共通スタイル */
+      html, body {
         margin: 0;
         height: 100%;
         overflow: hidden;
+        background-color: #343a40;
+        color: white;
+      }
+
+      /* メインアプリスタイル */
+      #app {
+        height: 100%;
+        overflow: hidden;
+        display: none; /* 最初は非表示 */
       }
 
       .fullscreen-appsheet {
@@ -73,433 +86,674 @@
       #nav-hover-bar.active {
         transform: translateY(0%);
       }
+
+      /* 認証関連のスタイル */
+      #auth-page {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        width: 100vw;
+        background-color: #343a40;
+      }
+
+      .auth-container {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        max-width: 400px;
+        width: 100%;
+        text-align: center;
+      }
+
+      .title {
+        margin-bottom: 30px;
+        font-size: 2rem;
+      }
+
+      .login-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .custom-signin-button {
+        background-color: white;
+        color: #444;
+        border-radius: 5px;
+        border: none;
+        padding: 10px 15px;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      .custom-signin-button:hover {
+        background-color: #f1f1f1;
+      }
+
+      .custom-signin-button img {
+        margin-right: 10px;
+        width: 18px;
+        height: 18px;
+      }
+
+      #errorMessage {
+        color: #ff6b6b;
+        margin-top: 15px;
+        display: none;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .user-auth-status {
+        position: fixed;
+        top: 10px;
+        right: 15px;
+        z-index: 102;
+        display: flex;
+        align-items: center;
+        color: white;
+        font-size: 0.8rem;
+      }
+      
+      .user-email {
+        margin-right: 10px;
+        max-width: 200px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      
+      .logout-btn {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: none;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      
+      .logout-btn:hover {
+        background-color: rgba(255, 255, 255, 0.3);
+      }
+
+      #loading-view {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
     </style>
   </head>
 
-  <body class="bg-dark">
-  <div id="app"><!--appここから-->
-
-  <!-- iframe全画面 -->
-  <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
-    <iframe
-      src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
-      ref="fullscreenFrame"
-      :style="{
-        width: '100%',
-        height: '100%',
-        border: 'none',
-        pointerEvents: showNav ? 'none' : 'auto'
-      }"
-      scrolling="no"
-      allowfullscreen
-      allow="clipboard-read; clipboard-write;"
-      @load="handleIframeLoad"
-      @error="iframeError = true">
-    </iframe>
-    
-    <!-- AppSheet専用のヘルプメッセージ -->
-    <div v-if="!alreadyOpened" 
-         class="appsheet-helper alert alert-info m-3 position-absolute" 
-         style="top: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; z-index: 10;">
-      <button type="button" class="close" @click="alreadyOpened = true">&times;</button>
-      <h5>AppSheetアプリについて</h5>
-      <p>表示に問題がある場合は、下記の「新しいタブで開く」ボタンをクリックしてください。またはX-frame headerを無効化するプラグインをブラウザに導入してください</p>
-      <button @click="openAppsheetInNewTab" class="btn btn-primary btn-sm">
-        新しいタブで開く
-      </button>
-    </div>
-  </div>
-
-  <!-- エラー時の強化されたAppSheetリカバリーUI -->
-  <div v-if="iframeError" class="d-flex flex-column align-items-center my-4 p-3 bg-light rounded">
-    <div class="alert alert-danger mb-3 w-100" role="alert">
-      <h4 class="alert-heading">
-        <span class="mr-2">⚠️</span> 
-        AppSheetアプリの表示に問題が発生しています
-      </h4>
-      <p>サーバーへの接続が拒否されました。これには以下のような原因が考えられます：</p>
-      <ul>
-        <li>ネットワーク接続の問題（企業ネットワークの制限など）</li>
-        <li>AppSheetサービスへのアクセス権限の問題</li>
-        <li>ブラウザの認証情報やCookieの問題</li>
-      </ul>
-    </div>
-    
-    <div class="d-flex flex-column flex-md-row mb-3 w-100 justify-content-center">
-      <button @click="openAppsheetFallback" class="btn btn-primary btn-lg m-2">
-        <span class="mr-2">🔗</span> 
-        AppSheetを新しいタブで開く
-      </button>
-      
-      <button @click="troubleshootAppSheet" class="btn btn-outline-secondary btn-lg m-2">
-        <span class="mr-2">🔧</span>
-        トラブルシューティング
-      </button>
-    </div>
-    
-    <small class="text-muted mb-2">※ ブラウザのポップアップブロックを許可してください</small>
-    
-    <div class="card w-100 mt-3">
-      <div class="card-header bg-info text-white">
-        さらに詳しい解決方法
-      </div>
-      <div class="card-body">
-        <ol>
-          <li>Google アカウントに直接ログインしていることを確認してください</li>
-          <li>ブラウザのシークレットモードや別のブラウザで試してみてください</li>
-          <li>ブラウザのキャッシュとCookieをクリアしてから再試行してください</li>
-          <li>企業ネットワークを使用している場合は、個人回線で試してみてください</li>
-          <li>直接 <a href="https://www.appsheet.com" target="_blank">AppSheet</a> にアクセスしてログインした後、このポータルに戻ってきてください</li>
-        </ol>
-      </div>
-    </div>
-    
-    <button @click="resetAppSheetError" class="btn btn-link mt-3">
-      エラー表示を閉じる
-    </button>
-  </div>
-
-  <!-- ホバーゾーンとナビ -->
-    <div id="nav-hover-zone" v-show="showContents[0] !== '99999'" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
-    <nav 
-      id="nav-hover-bar"
-      class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
-      :class="{ active: showNav }"
-      @mouseenter="showNav = true"
-      @mouseleave="showNav = false">
-      <h3 class="navbar-brand" @click="toggle('99999')">ARIEL</h3>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
-          aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-      
-      <!--ドロップダウンリストここから-->
-      <div class="collapse navbar-collapse" id="navbarNavDropdown">
-        <ul class="navbar-nav">
- 
-         <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="knowledge in knowledges" :key="knowledge.id" class="dropdown-item" v-bind:href="knowledge.url" target="_blank">{{knowledge.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-         
-        <!--埋め込み用ドロップダウンリストここから 
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a class="dropdown-item" @click="toggle('99999')" >MAIN APPSHEET</a>
-              <a v-for="sheet in sheets" :key="sheet.id" class="dropdown-item" @click="toggle(sheet.id)" >{{sheet.name}}</a>
-            </div>
-          </li>
-          ここまで-->
+  <body>
+    <!-- 認証ページ -->
+    <div id="auth-page">
+      <div class="auth-container">
+        <h1 class="title">ARIEL ポータル</h1>
+        
+        <div id="login-view">
+          <p>続行するには認証が必要です</p>
           
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="learning in learnings" :key="learning.id" class="dropdown-item" v-bind:href="learning.url" target="_blank">{{learning.name}}</a>
+          <div class="login-methods">
+            <!-- Google サインインボタン -->
+            <div class="d-flex justify-content-center">
+              <div id="g-signin2" class="g-signin2" data-onsuccess="onSignIn"></div>
             </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-      
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="drive in drives" :key="drive.id" class="dropdown-item" v-bind:href="drive.url" target="_blank">{{drive.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="gsuite in gsuites" :key="gsuite.id" class="dropdown-item" v-bind:href="gsuite.url" target="_blank">{{gsuite.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="tool in tools" :key="tool.id" class="dropdown-item" v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="it in its" :key="it.id" class="dropdown-item" v-bind:href="it.url" target="_blank">{{it.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="tv in tvs" :key="tv.id" class="dropdown-item" v-bind:href="tv.url" target="_blank">{{tv.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-
-          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
-            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-              <a v-for="prv in prvs" :key="prv.id" class="dropdown-item" v-bind:href="prv.url" target="_blank">{{prv.name}}</a>
-            </div>
-          </li>
-          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-        </ul>
-      </div>
-      <!--ドロップダウンリストここまで-->
-    </nav>
-  <!--ナビバーここまで-->
-  </br>
-     
-     <!--ドロップダウンに対するリアクションここから-->
-      <div id="sub">
-        
-        <!--カテゴリ内フレームここから
-        <div v-for="sheet in sheets" :key="sheet.id">
-         <div v-if="showContents==sheet.id">
-          <div class="embed-responsive embed-responsive-21by9 bg-light"> 
-            <iframe class="embed-responsive-item allowfullscreen" v-bind:src="sheet.url"></iframe>
+            
+            <!-- または、カスタムデザインのボタン -->
+            <button onclick="triggerGoogleSignIn()" class="custom-signin-button">
+              <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
+              Googleアカウントでログイン
+            </button>
           </div>
-         </div>
+          
+          <div id="errorMessage"></div>
         </div>
-        カテゴリ内フレームここまで-->
-
+        
+        <div id="loading-view" class="hidden">
+          <div class="d-flex justify-content-center">
+            <div class="spinner-border text-light" role="status">
+              <span class="sr-only">Loading...</span>
+            </div>
+          </div>
+          <p class="mt-3">認証中...</p>
+        </div>
       </div>
-      <!--ドロップダウンに対するリアクションここまで-->
-    
-  </div>
-  <!--appここまで-->
-  <!--ここからVueの設定-->
-</body>
-<script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
-<script>
-var app = new Vue({
-  el:"#app",
-  data:{
-     knowledges:[
-      {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-      {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
-      {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
-      {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
-      {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
-      {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
-      {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
-      {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
-      {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
-      {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
-    ],
-    learnings:[
-      {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
-      {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
-      {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
-      {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
-    ],
-    drives:[
-      {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
-      {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
-      {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
-      {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
-    ],
-    gsuites:[
-      {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
-      {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
-      {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
-      {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
-    ],
-    tools:[
-      {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-      {id:"4002",name:"Claude",url:"https://claude.ai/new"},
-      {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
-      {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
-      {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
-      {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
-      {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
-      {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
-      {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
-    ],
-    its:[
-      {id:"5001",name:"Github",url:"https://github.com/"},
-      {id:"5002",name:"Qiita",url:"https://qiita.com/"},
-      {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
-      {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
-      {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
-    ],
-    tvs:[
-      {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
-      {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
-      {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
-      {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
-      {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
-      {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
-      {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
-      {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
-      {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
-      {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
-    ],
-    prvs:[
-      {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
-      {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
-      {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
-      {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
-      {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
-      {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
-      {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
-    ],
-    showContents:["99999"],
-    showNav: true,
-    iframeError: false,
-    alreadyOpened: false,
-    errorDetails: null
-  },
-  watch: {
-    showNav(newVal) {
-      const iframe = this.$refs.fullscreenFrame;
-      if (iframe) {
-        iframe.style.pointerEvents = newVal ? 'none' : 'auto';
-      }
-    }
-  },
-  mounted() {
-    window.addEventListener('mousemove', this.handleMouseMove);
-  },
-  beforeDestroy() {
-    window.removeEventListener('mousemove', this.handleMouseMove);
-  },
-  methods:{
-    handleMouseMove(e) {
-      const y = e.clientY;
-      this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
-    },
-    toggle: function(data) {
-      this.showContents = [data];
-      this.alreadyOpened = false;
-      this.iframeError = false; // エラー状態をリセット
-      this.errorDetails = null;
-    },
-    handleIframeLoad() {
-      // AppSheet関連の場合
-      if (this.showContents[0] === '99999') {
-        // 少し遅延させて初回チェック
-        setTimeout(() => {
-          this.checkForAppSheetErrors();
-        }, 300);
+    </div>
 
-        // 一定時間後にも再チェック（遅延読み込みに対応）
-        setTimeout(() => {
-          this.checkForAppSheetErrors();
-        }, 1500);
-      }
-    },
-    
-    // AppSheetエラーチェックを分離した関数
-    checkForAppSheetErrors() {
-      try {
-        const iframe = this.$refs.fullscreenFrame;
-        if (!iframe) return;
+    <!-- ユーザー認証ステータス -->
+    <div class="user-auth-status" id="user-auth-status" style="display: none;">
+      <span class="user-email" id="user-email"></span>
+      <button class="logout-btn" onclick="logout()">ログアウト</button>
+    </div>
+
+    <!-- メインアプリ -->
+    <div id="app"><!--appここから-->
+
+      <!-- iframe全画面 -->
+      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
+        <iframe
+          src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
+          ref="fullscreenFrame"
+          :style="{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: showNav ? 'none' : 'auto'
+          }"
+          scrolling="no"
+          allowfullscreen
+          allow="clipboard-read; clipboard-write;"
+          @load="handleIframeLoad"
+          @error="iframeError = true">
+        </iframe>
         
-        // 1. ドキュメントにアクセスを試みる
-        let iframeDoc;
-        try {
-          iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        } catch (e) {
-          // クロスオリジンエラーならばエラーフラグを立てる
-          this.iframeError = true;
-          console.warn("クロスオリジンポリシーによりiframeへのアクセスができません", e);
-          return;
-        }
+        <!-- AppSheet専用のヘルプメッセージ -->
+        <div v-if="!alreadyOpened" 
+             class="appsheet-helper alert alert-info m-3 position-absolute" 
+             style="top: 0; left: 0; right: 0; max-width: 600px; margin: 0 auto; z-index: 10;">
+          <button type="button" class="close" @click="alreadyOpened = true">&times;</button>
+          <h5>AppSheetアプリについて</h5>
+          <p>表示に問題がある場合は、下記の「新しいタブで開く」ボタンをクリックしてください。またはX-frame headerを無効化するプラグインをブラウザに導入してください</p>
+          <button @click="openAppsheetInNewTab" class="btn btn-primary btn-sm">
+            新しいタブで開く
+          </button>
+        </div>
+      </div>
+
+      <!-- エラー時の強化されたAppSheetリカバリーUI -->
+      <div v-if="iframeError" class="d-flex flex-column align-items-center my-4 p-3 bg-light rounded">
+        <div class="alert alert-danger mb-3 w-100" role="alert">
+          <h4 class="alert-heading">
+            <span class="mr-2">⚠️</span> 
+            AppSheetアプリの表示に問題が発生しています
+          </h4>
+          <p>サーバーへの接続が拒否されました。これには以下のような原因が考えられます：</p>
+          <ul>
+            <li>ネットワーク接続の問題（企業ネットワークの制限など）</li>
+            <li>AppSheetサービスへのアクセス権限の問題</li>
+            <li>ブラウザの認証情報やCookieの問題</li>
+          </ul>
+        </div>
         
-        if (!iframeDoc) return;
+        <div class="d-flex flex-column flex-md-row mb-3 w-100 justify-content-center">
+          <button @click="openAppsheetFallback" class="btn btn-primary btn-lg m-2">
+            <span class="mr-2">🔗</span> 
+            AppSheetを新しいタブで開く
+          </button>
+          
+          <button @click="troubleshootAppSheet" class="btn btn-outline-secondary btn-lg m-2">
+            <span class="mr-2">🔧</span>
+            トラブルシューティング
+          </button>
+        </div>
         
-        // 2. iframe内の要素から状態を確認
-        const text = iframeDoc.body.innerText || '';
+        <small class="text-muted mb-2">※ ブラウザのポップアップブロックを許可してください</small>
         
-        // 3. エラーパターンを拡張
-        const errorPatterns = [
-          "requestStorageAccess",
-          "Error obtaining storage access",
-          "接続が拒否されました",
-          "Sign into AppSheet",
-          "Why am I seeing this?",
-          "denied",
-          "access",
-          "拒否",
-          "接続",
-          "error",
-          "refused",
-          "connection",
-          "blocked",
-          "ブロック"
-        ];
+        <div class="card w-100 mt-3">
+          <div class="card-header bg-info text-white">
+            さらに詳しい解決方法
+          </div>
+          <div class="card-body">
+            <ol>
+              <li>Google アカウントに直接ログインしていることを確認してください</li>
+              <li>ブラウザのシークレットモードや別のブラウザで試してみてください</li>
+              <li>ブラウザのキャッシュとCookieをクリアしてから再試行してください</li>
+              <li>企業ネットワークを使用している場合は、個人回線で試してみてください</li>
+              <li>直接 <a href="https://www.appsheet.com" target="_blank">AppSheet</a> にアクセスしてログインした後、このポータルに戻ってきてください</li>
+            </ol>
+          </div>
+        </div>
         
-        const hasError = errorPatterns.some(pattern => 
-          text.toLowerCase().includes(pattern.toLowerCase()));
+        <button @click="resetAppSheetError" class="btn btn-link mt-3">
+          エラー表示を閉じる
+        </button>
+      </div>
+
+      <!-- ホバーゾーンとナビ -->
+      <div id="nav-hover-zone" v-show="showContents[0] !== '99999'" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
+      <nav 
+        id="nav-hover-bar"
+        class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
+        :class="{ active: showNav }"
+        @mouseenter="showNav = true"
+        @mouseleave="showNav = false">
+        <h3 class="navbar-brand" @click="toggle('99999')">ARIEL</h3>
+          <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+            aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
         
-        // 4. 見た目のチェックも追加
-        const hasErrorIcon = iframeDoc.querySelector('.error-icon') || 
-                            iframeDoc.querySelector('[data-error]') ||
-                            iframeDoc.body.innerHTML.includes('face_with_raised_eyebrow');
+        <!--ドロップダウンリストここから-->
+        <div class="collapse navbar-collapse" id="navbarNavDropdown">
+          <ul class="navbar-nav">
+   
+           <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="knowledge in knowledges" :key="knowledge.id" class="dropdown-item" v-bind:href="knowledge.url" target="_blank">{{knowledge.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+            
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="learning in learnings" :key="learning.id" class="dropdown-item" v-bind:href="learning.url" target="_blank">{{learning.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
         
-        if ((hasError || hasErrorIcon) && !this.alreadyOpened) {
-          this.iframeError = true;
-          this.errorDetails = {
-            type: 'connection_refused',
-            message: 'AppSheetとの接続が拒否されました。新しいタブで直接開いてください。'
-          };
-        }
-      } catch (e) {
-        // すべての例外をキャッチ
-        this.iframeError = true;
-        console.warn("AppSheetの読み込みに問題が発生しました", e);
-      }
-    },
-    
-    // エラー状態をリセットする関数
-    resetAppSheetError() {
-      this.iframeError = false;
-      this.errorDetails = null;
-    },
-    
-    // 明示的に新しいタブで開く機能
-    openAppsheetInNewTab() {
-      const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-      window.open(appsheetUrl, '_blank');
-      this.alreadyOpened = true;
-    },
-    
-    // AppSheetのフォールバック機能（バックアップ用）
-    openAppsheetFallback() {
-      const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
-      window.open(appsheetUrl, '_blank');
-      this.alreadyOpened = true;
-    },
-    
-    // 問題解決のためのトラブルシューティングステップ
-    troubleshootAppSheet() {
-      const steps = [
-        "1. ブラウザキャッシュとCookieをクリアします",
-        "2. 別のブラウザで試してみます",
-        "3. 企業ネットワークではなく、個人の回線で試してみます",
-        "4. Google アカウントに直接ログインしてから再試行します",
-        "5. AppSheetに直接アクセスしてからポータルに戻ります"
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="drive in drives" :key="drive.id" class="dropdown-item" v-bind:href="drive.url" target="_blank">{{drive.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="gsuite in gsuites" :key="gsuite.id" class="dropdown-item" v-bind:href="gsuite.url" target="_blank">{{gsuite.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="tool in tools" :key="tool.id" class="dropdown-item" v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="it in its" :key="it.id" class="dropdown-item" v-bind:href="it.url" target="_blank">{{it.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="tv in tvs" :key="tv.id" class="dropdown-item" v-bind:href="tv.url" target="_blank">{{tv.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+             <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
+              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                <a v-for="prv in prvs" :key="prv.id" class="dropdown-item" v-bind:href="prv.url" target="_blank">{{prv.name}}</a>
+              </div>
+            </li>
+            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+          </ul>
+        </div>
+        <!--ドロップダウンリストここまで-->
+      </nav>
+      <!--ナビバーここまで-->
+      </br>
+       
+       <!--ドロップダウンに対するリアクションここから-->
+        <div id="sub">
+          <!-- 空のドロップダウン対応領域 -->
+        </div>
+        <!--ドロップダウンに対するリアクションここまで-->
+      
+    </div>
+    <!--appここまで-->
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+    <script>
+      // 認証関連の設定
+      // --------------------------------------------
+      
+      // 許可するGoogleアカウントのメールアドレス（配列に追加して複数設定可能）
+      const allowedEmails = [
+        'k.sugimori.cz@gmail.com',
+        'k.sugimori.p@gmail.com',
+        'sugimori@skyarch.net'
+        // 必要に応じて追加
       ];
       
-      alert(steps.join("\n"));
-    }
-  },
-});
-</script>
+      // Google サインインを手動でトリガー
+      function triggerGoogleSignIn() {
+        try {
+          document.querySelector('.g-signin2 div[role="button"]').click();
+        } catch (e) {
+          console.error('Google Sign-Inボタンが見つかりませんでした。GoogleのJSライブラリが正しく読み込まれているか確認してください。', e);
+          showError('Google認証の初期化に失敗しました。ページを再読み込みしてください。');
+        }
+      }
+      
+      // Google認証成功時のコールバック
+      function onSignIn(googleUser) {
+        showLoading();
+        
+        // ユーザープロフィール情報の取得
+        const profile = googleUser.getBasicProfile();
+        const email = profile.getEmail();
+        
+        // 許可リストにあるメールアドレスかチェック
+        if (allowedEmails.includes(email)) {
+          // 認証成功：ローカルストレージに認証トークンを保存
+          const authToken = googleUser.getAuthResponse().id_token;
+          localStorage.setItem('ariel_auth_token', authToken);
+          localStorage.setItem('ariel_email', email);
+          
+          // メインコンテンツを表示
+          setTimeout(() => {
+            showApp(email);
+          }, 1000);
+        } else {
+          // 認証失敗
+          googleUser.disconnect();
+          showError('このGoogleアカウントには、このページへのアクセス権限がありません。');
+        }
+      }
+      
+      // エラーメッセージを表示
+      function showError(message) {
+        const errorElement = document.getElementById('errorMessage');
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+        
+        hideLoading();
+      }
+      
+      // ローディング表示の切り替え
+      function showLoading() {
+        document.getElementById('login-view').classList.add('hidden');
+        document.getElementById('loading-view').classList.remove('hidden');
+      }
+      
+      function hideLoading() {
+        document.getElementById('login-view').classList.remove('hidden');
+        document.getElementById('loading-view').classList.add('hidden');
+      }
+      
+      // メインアプリの表示
+      function showApp(userEmail) {
+        // 認証ページを非表示
+        document.getElementById('auth-page').style.display = 'none';
+        
+        // メインアプリを表示
+        document.getElementById('app').style.display = 'block';
+        
+        // ユーザー情報表示
+        document.getElementById('user-email').textContent = userEmail;
+        document.getElementById('user-auth-status').style.display = 'flex';
+      }
+      
+      // ログアウト関数
+      function logout() {
+        // ローカルストレージから認証情報を削除
+        localStorage.removeItem('ariel_auth_token');
+        localStorage.removeItem('ariel_email');
+        
+        // Google認証をサインアウト
+        const auth2 = gapi.auth2.getAuthInstance();
+        if (auth2) {
+          auth2.signOut().then(() => {
+            // ページをリロード
+            window.location.reload();
+          });
+        } else {
+          // gapi.auth2が初期化されていない場合はリロードのみ
+          window.location.reload();
+        }
+      }
+      
+      // ページ読み込み時に認証状態をチェック
+      document.addEventListener('DOMContentLoaded', function() {
+        // すでに認証済みかチェック
+        const authToken = localStorage.getItem('ariel_auth_token');
+        const email = localStorage.getItem('ariel_email');
+        
+        if (authToken && email) {
+          // すでに認証済みならメインコンテンツを表示
+          showApp(email);
+        }
+      });
+      
+      // Vue インスタンス作成
+      var app = new Vue({
+        el:"#app",
+        data:{
+           knowledges:[
+            {id:"0001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+            {id:"0002",name:"Flier",url:"https://www.flierinc.com/"},
+            {id:"0003",name:"Googleニュース",url:"https://news.google.com/"},
+            {id:"0004",name:"経済レポート",url:"http://www3.keizaireport.com/"},
+            {id:"0005",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
+            {id:"0006",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
+            {id:"0007",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
+            {id:"0008",name:"東洋経済",url:"https://toyokeizai.net/"},
+            {id:"0009",name:"CNN",url:"https://www.cnn.co.jp/"},
+            {id:"0010",name:"GIGAZINE",url:"https://gigazine.net/"},   
+          ],
+          learnings:[
+            {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
+            {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
+            {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
+            {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
+          ],
+          drives:[
+            {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
+            {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
+            {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
+            {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
+          ],
+          gsuites:[
+            {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
+            {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
+            {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
+            {id:"3004",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
+          ],
+          tools:[
+            {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
+            {id:"4002",name:"Claude",url:"https://claude.ai/new"},
+            {id:"4003",name:"Dify",url:"https://cloud.dify.ai/apps"},
+            {id:"4004",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
+            {id:"4005",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
+            {id:"4006",name:"Canva",url:"https://www.canva.com/ja_jp/"},
+            {id:"4007",name:"draw.io",url:"https://www.draw.io/"},
+            {id:"4008",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
+            {id:"4009",name:"icooon-mono",url:"https://icooon-mono.com/"},
+          ],
+          its:[
+            {id:"5001",name:"Github",url:"https://github.com/"},
+            {id:"5002",name:"Qiita",url:"https://qiita.com/"},
+            {id:"5003",name:"GoogleAppsScript",url:"https://developers.google.com/apps-script/reference"},
+            {id:"5004",name:"Vue.js",url:"https://012-jp.vuejs.org/guide/"},
+            {id:"5005",name:"Bootstrap",url:"https://getbootstrap.jp/docs/4.2/getting-started/introduction/"},
+          ],
+          tvs:[
+            {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
+            {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
+            {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
+            {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
+            {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
+            {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
+            {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
+            {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
+            {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
+            {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
+          ],
+          prvs:[
+            {id:"7001",name:"Twitter",url:"https://twitter.com/home"},
+            {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
+            {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
+            {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
+            {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
+            {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
+            {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
+          ],
+          showContents:["99999"],
+          showNav: true,
+          iframeError: false,
+          alreadyOpened: false,
+          errorDetails: null
+        },
+        watch: {
+          showNav(newVal) {
+            const iframe = this.$refs.fullscreenFrame;
+            if (iframe) {
+              iframe.style.pointerEvents = newVal ? 'none' : 'auto';
+            }
+          }
+        },
+        mounted() {
+          window.addEventListener('mousemove', this.handleMouseMove);
+        },
+        beforeDestroy() {
+          window.removeEventListener('mousemove', this.handleMouseMove);
+        },
+        methods:{
+          handleMouseMove(e) {
+            const y = e.clientY;
+            this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
+          },
+          toggle: function(data) {
+            this.showContents = [data];
+            this.alreadyOpened = false;
+            this.iframeError = false; // エラー状態をリセット
+            this.errorDetails = null;
+          },
+          handleIframeLoad() {
+            // AppSheet関連の場合
+            if (this.showContents[0] === '99999') {
+              // 少し遅延させて初回チェック
+              setTimeout(() => {
+                this.checkForAppSheetErrors();
+              }, 300);
+
+              // 一定時間後にも再チェック（遅延読み込みに対応）
+              setTimeout(() => {
+                this.checkForAppSheetErrors();
+              }, 1500);
+            }
+          },
+          
+          // AppSheetエラーチェックを分離した関数
+          checkForAppSheetErrors() {
+            try {
+              const iframe = this.$refs.fullscreenFrame;
+              if (!iframe) return;
+              
+              // 1. ドキュメントにアクセスを試みる
+              let iframeDoc;
+              try {
+                iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+              } catch (e) {
+                // クロスオリジンエラーならばエラーフラグを立てる
+                this.iframeError = true;
+                console.warn("クロスオリジンポリシーによりiframeへのアクセスができません", e);
+                return;
+              }
+              
+              if (!iframeDoc) return;
+              
+              // 2. iframe内の要素から状態を確認
+              const text = iframeDoc.body.innerText || '';
+              
+              // 3. エラーパターンを拡張
+              const errorPatterns = [
+                "requestStorageAccess",
+                "Error obtaining storage access",
+                "接続が拒否されました",
+                "Sign into AppSheet",
+                "Why am I seeing this?",
+                "denied",
+                "access",
+                "拒否",
+                "接続",
+                "error",
+                "refused",
+                "connection",
+                "blocked",
+                "ブロック"
+              ];
+              
+              const hasError = errorPatterns.some(pattern => 
+                text.toLowerCase().includes(pattern.toLowerCase()));
+              
+              // 4. 見た目のチェックも追加
+              const hasErrorIcon = iframeDoc.querySelector('.error-icon') || 
+                                  iframeDoc.querySelector('[data-error]') ||
+                                  iframeDoc.body.innerHTML.includes('face_with_raised_eyebrow');
+              
+              if ((hasError || hasErrorIcon) && !this.alreadyOpened) {
+                this.iframeError = true;
+                this.errorDetails = {
+                  type: 'connection_refused',
+                  message: 'AppSheetとの接続が拒否されました。新しいタブで直接開いてください。'
+                };
+              }
+            } catch (e) {
+              // すべての例外をキャッチ
+              this.iframeError = true;
+              console.warn("AppSheetの読み込みに問題が発生しました", e);
+            }
+          },
+          
+          // エラー状態をリセットする関数
+          resetAppSheetError() {
+            this.iframeError = false;
+            this.errorDetails = null;
+          },
+          
+          // 明示的に新しいタブで開く機能
+          openAppsheetInNewTab() {
+            const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
+            window.open(appsheetUrl, '_blank');
+            this.alreadyOpened = true;
+          },
+          
+          // AppSheetのフォールバック機能（バックアップ用）
+          openAppsheetFallback() {
+            const appsheetUrl = "https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b";
+            window.open(appsheetUrl, '_blank');
+            this.alreadyOpened = true;
+          },
+          
+          // 問題解決のためのトラブルシューティングステップ
+          troubleshootAppSheet() {
+            const steps = [
+              "1. ブラウザキャッシュとCookieをクリアします",
+              "2. 別のブラウザで試してみます",
+              "3. 企業ネットワークではなく、個人の回線で試してみます",
+              "4. Google アカウントに直接ログインしてから再試行します",
+              "5. AppSheetに直接アクセスしてからポータルに戻ります"
+            ];
+            
+            alert(steps.join("\n"));
+          }
+        }
+      });
+    </script>
+  </body>
 </html>
