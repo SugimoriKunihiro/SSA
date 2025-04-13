@@ -145,42 +145,6 @@
         height: 18px;
       }
 
-      /* 追加した直接ログインボタン */
-      .direct-login-btn {
-        margin-top: 15px;
-        background-color: #007bff;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 8px 15px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        width: 100%;
-        margin-bottom: 5px;
-      }
-
-      .direct-login-btn:hover {
-        background-color: #0069d9;
-      }
-
-      .emergency-btn {
-        margin-top: 20px;
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        padding: 8px 15px;
-        font-weight: bold;
-        cursor: pointer;
-        transition: background-color 0.3s;
-        width: 100%;
-      }
-
-      .emergency-btn:hover {
-        background-color: #c82333;
-      }
-
       #errorMessage {
         color: #ff6b6b;
         margin-top: 15px;
@@ -229,12 +193,6 @@
         align-items: center;
         justify-content: center;
       }
-      
-      .divider {
-        margin: 20px 0;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        width: 100%;
-      }
 
       /* 通知ツールチップ */
       .tooltip-message {
@@ -278,28 +236,6 @@
             <button id="custom-signin-btn" class="custom-signin-button mt-3">
               <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google logo">
               Googleアカウントでログイン
-            </button>
-            
-            <!-- 直接ログインオプション（追加） -->
-            <div class="divider"></div>
-            <p class="small">または直接ログイン：</p>
-            
-            <button id="login-cz-btn" class="direct-login-btn">
-              杉森 (cz) としてログイン
-            </button>
-            
-            <button id="login-p-btn" class="direct-login-btn">
-              杉森 (p) としてログイン
-            </button>
-            
-            <button id="login-skyarch-btn" class="direct-login-btn">
-              杉森 (skyarch) としてログイン
-            </button>
-            
-            <!-- 緊急アクセスボタン -->
-            <div class="divider"></div>
-            <button id="emergency-access-btn" class="emergency-btn">
-              緊急アクセス（管理者用）
             </button>
           </div>
           
@@ -486,35 +422,24 @@
         }
       }
       
-      // 直接ログイン機能
-      function directLogin(email) {
-        console.log('直接ログイン: ', email);
+      // Google認証処理を実行する関数
+      function handleGoogleAuth() {
+        console.log('Google認証が開始されました');
         
         // ローディング表示
         showLoading();
         
+        // ここで実際のGoogle認証を行う代わりに、仮のデモとして最初のメールを使用
+        const email = allowedEmails[0];
+        
         // 認証情報を保存
         localStorage.setItem('ariel_email', email);
-        localStorage.setItem('ariel_auth_token', 'direct_' + Date.now());
+        localStorage.setItem('ariel_auth_token', 'google_' + Date.now());
         
         // メイン画面表示
         setTimeout(() => {
           showApp(email);
         }, 500);
-      }
-      
-      // 緊急アクセス機能
-      function emergencyAccess() {
-        console.log('緊急アクセス実行');
-        
-        // AppSheetを別タブで開く
-        window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
-        
-        // 緊急フラグを保存
-        localStorage.setItem('ariel_emergency', 'true');
-        
-        // メイン画面表示
-        showApp('緊急アクセスモード');
       }
       
       // ページ読み込み時に実行
@@ -524,34 +449,16 @@
         // ローカルストレージのチェック
         const email = localStorage.getItem('ariel_email');
         const token = localStorage.getItem('ariel_auth_token');
-        const emergency = localStorage.getItem('ariel_emergency');
         
-        // ボタンにイベントリスナーを設定
-        document.getElementById('login-cz-btn').addEventListener('click', function() {
-          directLogin('k.sugimori.cz@gmail.com');
-        });
-        
-        document.getElementById('login-p-btn').addEventListener('click', function() {
-          directLogin('k.sugimori.p@gmail.com');
-        });
-        
-        document.getElementById('login-skyarch-btn').addEventListener('click', function() {
-          directLogin('sugimori@skyarch.net');
-        });
-        
-        document.getElementById('emergency-access-btn').addEventListener('click', function() {
-          emergencyAccess();
-        });
-        
+        // Googleサインインボタンにイベントリスナーを設定
         document.getElementById('custom-signin-btn').addEventListener('click', function() {
-          // Googleサインインの代わりに、とりあえず直接ログイン
-          directLogin('k.sugimori.cz@gmail.com');
+          handleGoogleAuth();
         });
         
         // 認証済みかチェック
-        if ((email && token) || emergency === 'true') {
-          console.log('認証情報を検出: ', email || '緊急アクセス');
-          showApp(email || '緊急アクセスモード');
+        if (email && token) {
+          console.log('認証情報を検出: ', email);
+          showApp(email);
         }
       });
       
@@ -639,8 +546,7 @@
           
           // ローカルストレージからユーザー情報を取得
           const email = localStorage.getItem('ariel_email');
-          const emergency = localStorage.getItem('ariel_emergency');
-          this.userEmail = email || (emergency === 'true' ? '緊急アクセスモード' : 'ゲスト');
+          this.userEmail = email || 'ゲスト';
           
           // AppSheetを自動的に選択
           this.showContents = ["99999"];
@@ -682,6 +588,7 @@
                 console.log(`scrollTo called (${i + 1})`);
               }, 300 * (i + 1));
             }
+            
             // フレームが完全に読み込まれたことを通知
             this.showTooltip = true;
             this.tooltipMessage = 'AppSheetが読み込まれました';
@@ -727,7 +634,6 @@
             // ローカルストレージから認証情報を削除
             localStorage.removeItem('ariel_auth_token');
             localStorage.removeItem('ariel_email');
-            localStorage.removeItem('ariel_emergency');
             
             // ページをリロード
             window.location.reload();
