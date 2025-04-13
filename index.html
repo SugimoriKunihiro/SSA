@@ -491,6 +491,11 @@
         console.log('GAPI検出: 読み込み開始');
         document.getElementById('debugGAPI').textContent = 'GAPI状態: 検出済み、auth2読み込み中...';
         
+        // 現在のURLを取得して正確なリダイレクトURIを設定
+        const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
+        const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+        console.log('使用するリダイレクトURI:', redirectUri);
+        
         // auth2モジュールを読み込む
         gapi.load('auth2', function() {
           console.log('Auth2モジュール読み込み完了');
@@ -530,6 +535,7 @@
                 cookiepolicy: 'single_host_origin',
                 // ポップアップではなくリダイレクトモードを使用
                 ux_mode: 'redirect',
+                redirect_uri: redirectUri, // 明示的にリダイレクトURIを指定
                 scope: 'profile email'
               }).then(function(auth2) {
                 // 初期化成功、グローバル変数に保存
@@ -614,10 +620,15 @@
         const element = document.getElementById('g-signin2');
         if (element) {
           try {
+            // 現在のURLを取得して正確なリダイレクトURIを設定
+            const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
+            const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+            
             auth2.attachClickHandler(element, {
               // ボタンクリック時のオプション
-              prompt: 'select_account', // アカウント選択画面を表示
-              ux_mode: 'redirect'       // リダイレクトモードも試す
+              prompt: 'select_account',    // アカウント選択画面を表示
+              ux_mode: 'redirect',         // リダイレクトモードを使用
+              redirect_uri: redirectUri    // 現在のURLをリダイレクト先に設定
             },
             function(googleUser) {
               onSignIn(googleUser);
@@ -627,6 +638,8 @@
               handleSignInError(error);
             });
             console.log('サインインボタンにハンドラを設定しました');
+            console.log('リダイレクトURI:', redirectUri);
+            document.getElementById('debugAuth').textContent = 'Auth2状態: ボタン設定完了、リダイレクトURI: ' + redirectUri;
           } catch (e) {
             console.error('ボタンハンドラ設定エラー:', e);
           }
@@ -646,6 +659,12 @@
         }
         
         try {
+          // 現在のURLを取得して正確なリダイレクトURIを設定
+          const currentUrl = window.location.href.split('?')[0]; // クエリパラメータを除去
+          const redirectUri = currentUrl.replace(/#.*$/, ''); // ハッシュも除去
+          console.log('使用するリダイレクトURI:', redirectUri);
+          document.getElementById('debugAuth').textContent = 'Auth2状態: リダイレクトURI: ' + redirectUri;
+          
           // すでに初期化済みの認証インスタンスがあるか確認
           let authInstance;
           try {
@@ -664,7 +683,8 @@
             // リダイレクトモードでサインイン
             authInstance.signIn({
               prompt: 'select_account',
-              ux_mode: 'redirect'
+              ux_mode: 'redirect',
+              redirect_uri: redirectUri // 明示的にリダイレクトURIを指定
             }).then(function(googleUser) {
               onSignIn(googleUser);
             }).catch(function(error) {
@@ -672,42 +692,37 @@
             });
           } else {
             // 初期化が必要
-            initGoogleAuth();
             showError('Google認証の初期化を行います。少々お待ちください。');
             
-            // 初期化完了を待ってサインイン
-            let checkCount = 0;
-            const authCheckInterval = setInterval(function() {
-              checkCount++;
-              try {
-                authInstance = gapi.auth2.getAuthInstance();
-                if (authInstance) {
-                  clearInterval(authCheckInterval);
-                  googleAuth2Instance = authInstance;
-                  googleAuthInitialized = true;
-                  
-                  console.log('Auth2インスタンス取得完了、サインイン実行');
-                  document.getElementById('debugAuth').textContent = 'Auth2状態: インスタンス取得完了';
-                  
-                  authInstance.signIn({
-                    prompt: 'select_account',
-                    ux_mode: 'redirect'
-                  }).then(function(googleUser) {
-                    onSignIn(googleUser);
-                  }).catch(function(error) {
-                    handleSignInError(error);
-                  });
-                }
-              } catch (e) {
-                console.log('Auth2インスタンス取得待機中...');
-              }
+            // 新規インスタンスを作成
+            gapi.auth2.init({
+              client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+              cookiepolicy: 'single_host_origin',
+              ux_mode: 'redirect',
+              redirect_uri: redirectUri, // 明示的にリダイレクトURIを指定
+              scope: 'profile email'
+            }).then(function(auth2) {
+              // 初期化成功、グローバル変数に保存
+              googleAuth2Instance = auth2;
+              googleAuthInitialized = true;
               
-              if (checkCount > 5) {
-                clearInterval(authCheckInterval);
-                showError('Google認証の初期化に時間がかかっています。ページを再読み込みしてから再試行してください。');
-                document.getElementById('fallback-signin-options').style.display = 'block';
-              }
-            }, 1000);
+              console.log('Google Auth2初期化成功');
+              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
+              
+              // サインイン実行
+              auth2.signIn({
+                prompt: 'select_account',
+                ux_mode: 'redirect',
+                redirect_uri: redirectUri // 明示的にリダイレクトURIを指定
+              }).then(function(googleUser) {
+                onSignIn(googleUser);
+              }).catch(function(error) {
+                handleSignInError(error);
+              });
+            }).catch(function(error) {
+              // 初期化失敗時の詳細エラー処理
+              handleAuthInitError(error);
+            });
           }
         } catch (e) {
           console.error('サインイン実行エラー', e);
