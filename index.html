@@ -437,6 +437,10 @@
       // 認証関連の設定
       // --------------------------------------------
       
+      // グローバル変数でAuth2の初期化状態を管理
+      let googleAuthInitialized = false;
+      let googleAuth2Instance = null;
+      
       // 許可するGoogleアカウントのメールアドレス（配列に追加して複数設定可能）
       const allowedEmails = [
         'k.sugimori.cz@gmail.com',
@@ -445,80 +449,132 @@
         // 必要に応じて追加
       ];
       
-      // Google認証の初期化
+      // Google認証の初期化関数を改善
       function initGoogleAuth() {
-        // ページ読み込み完了時の処理
-        if (typeof gapi !== 'undefined') {
-          gapi.load('auth2', function() {
-            // Auth2の初期化
-            gapi.auth2.init({
-              client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
-              cookiepolicy: 'single_host_origin',
-            }).then(function(auth2) {
-              // 初期化成功
-              console.log('Google Auth2初期化成功');
-              
-              // デバッグ情報更新
-              document.getElementById('debugGAPI').textContent = 'GAPI状態: 読み込み完了';
-              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
-              
-              // すでにサインインしているかチェック
-              if (auth2.isSignedIn.get()) {
-                const googleUser = auth2.currentUser.get();
-                onSignIn(googleUser);
-              }
-              
-              // サインインボタンにクリックハンドラを追加
-              const element = document.getElementById('g-signin2');
-              if (element) {
-                auth2.attachClickHandler(element, {},
-                  function(googleUser) {
-                    onSignIn(googleUser);
-                  },
-                  function(error) {
-                    console.error('Sign-in error', error);
-                    showError('Google認証に失敗しました: ' + error.error);
-                  }
-                );
-              }
-            }).catch(function(error) {
-              // 初期化失敗
-              console.error('Google Auth2初期化失敗', error);
-              document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + error;
-              showError('Google認証の初期化に失敗しました。ページを再読み込みしてください。');
-            });
-          });
-        } else {
+        // すでに初期化済みなら処理しない
+        if (googleAuthInitialized) return;
+        
+        console.log('Google認証の初期化を開始します...');
+        
+        // gapiが読み込まれているか確認
+        if (typeof gapi === 'undefined') {
           console.error('Google API (gapi) が見つかりません');
           document.getElementById('debugGAPI').textContent = 'GAPI状態: 未読み込み';
-          setTimeout(initGoogleAuth, 1000); // 1秒後に再試行
+          document.getElementById('debugInfo').style.display = 'block';
+          // 1秒後に再試行
+          setTimeout(initGoogleAuth, 1000);
+          return;
+        }
+        
+        console.log('GAPI検出: 読み込み開始');
+        document.getElementById('debugGAPI').textContent = 'GAPI状態: 検出済み、auth2読み込み中...';
+        
+        // auth2モジュールを読み込む
+        gapi.load('auth2', function() {
+          console.log('Auth2モジュール読み込み完了、初期化開始');
+          document.getElementById('debugGAPI').textContent = 'GAPI状態: auth2モジュール読み込み完了';
+          
+          // Auth2の初期化
+          gapi.auth2.init({
+            client_id: '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com',
+            cookiepolicy: 'single_host_origin',
+          }).then(function(auth2) {
+            // 初期化成功、グローバル変数に保存
+            googleAuth2Instance = auth2;
+            googleAuthInitialized = true;
+            
+            console.log('Google Auth2初期化成功');
+            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化完了';
+            
+            // サインインボタンの設定
+            setupSignInButton(auth2);
+            
+            // すでにサインインしているかチェック
+            if (auth2.isSignedIn.get()) {
+              const googleUser = auth2.currentUser.get();
+              onSignIn(googleUser);
+            }
+          }).catch(function(error) {
+            // 初期化失敗
+            console.error('Google Auth2初期化失敗', error);
+            document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化失敗 - ' + error;
+            document.getElementById('debugInfo').style.display = 'block';
+            showError('Google認証の初期化に失敗しました: ' + error.error);
+          });
+        });
+      }
+
+      // サインインボタン設定を分離
+      function setupSignInButton(auth2) {
+        // 標準のGoogleサインインボタン
+        const element = document.getElementById('g-signin2');
+        if (element) {
+          try {
+            auth2.attachClickHandler(element, {},
+              function(googleUser) {
+                onSignIn(googleUser);
+              },
+              function(error) {
+                console.error('Sign-in error', error);
+                showError('Google認証に失敗しました: ' + error.error);
+              }
+            );
+            console.log('サインインボタンにハンドラを設定しました');
+          } catch (e) {
+            console.error('ボタンハンドラ設定エラー:', e);
+          }
+        } else {
+          console.warn('g-signin2要素が見つかりません');
         }
       }
-      
-      // Google サインインを手動でトリガー
+
+      // Google サインインを手動でトリガーする関数を改善
       function triggerGoogleSignIn() {
-        try {
-          if (typeof gapi !== 'undefined' && gapi.auth2) {
-            const auth2 = gapi.auth2.getAuthInstance();
-            if (auth2) {
-              auth2.signIn().then(function(googleUser) {
-                onSignIn(googleUser);
-              }).catch(function(error) {
-                console.error('Manual sign-in error', error);
-                showError('Google認証に失敗しました: ' + (error.error || 'エラー詳細不明'));
-              });
-            } else {
-              showError('Google認証が初期化されていません。ページを再読み込みしてください。');
+        document.getElementById('debugInfo').style.display = 'block';
+        
+        // 初期化状態を確認
+        if (!googleAuthInitialized) {
+          console.log('Auth2がまだ初期化されていません。初期化を再試行します...');
+          document.getElementById('debugAuth').textContent = 'Auth2状態: 初期化待ち...';
+          
+          // 初期化を再試行し、完了後にサインインを実行
+          initGoogleAuth();
+          
+          // 初期化チェックを定期的に行い、初期化完了したらサインイン
+          let checkCount = 0;
+          const authCheckInterval = setInterval(function() {
+            checkCount++;
+            if (googleAuthInitialized) {
+              clearInterval(authCheckInterval);
+              console.log('Auth2初期化完了を検出、サインイン実行');
+              performGoogleSignIn();
+            } else if (checkCount > 10) {  // 10秒後にタイムアウト
+              clearInterval(authCheckInterval);
+              showError('Google認証の初期化がタイムアウトしました。ページを再読み込みしてください。');
             }
+          }, 1000);
+          
+          return;
+        }
+        
+        performGoogleSignIn();
+      }
+
+      // 実際のサインイン処理を行う関数
+      function performGoogleSignIn() {
+        try {
+          if (googleAuth2Instance) {
+            googleAuth2Instance.signIn().then(function(googleUser) {
+              onSignIn(googleUser);
+            }).catch(function(error) {
+              console.error('Manual sign-in error', error);
+              showError('Google認証に失敗しました: ' + (error.error || 'エラー詳細不明'));
+            });
           } else {
-            console.error('gapi.auth2 が初期化されていません');
-            // デバッグ表示を表示
-            document.getElementById('debugInfo').style.display = 'block';
-            showError('Google認証が読み込まれていません。少し待ってから再試行してください。');
+            showError('Google認証インスタンスが取得できません。ページを再読み込みしてください。');
           }
         } catch (e) {
           console.error('Google Sign-Inボタン操作エラー', e);
-          document.getElementById('debugInfo').style.display = 'block';
           showError('Google認証の操作中にエラーが発生しました: ' + e.message);
         }
       }
@@ -547,9 +603,8 @@
             }, 1000);
           } else {
             // 認証失敗
-            const auth2 = gapi.auth2.getAuthInstance();
-            if (auth2) {
-              auth2.signOut().then(function() {
+            if (googleAuth2Instance) {
+              googleAuth2Instance.signOut().then(function() {
                 showError(`このGoogleアカウント (${email}) には、このページへのアクセス権限がありません。`);
               });
             } else {
@@ -602,17 +657,11 @@
         localStorage.removeItem('ariel_email');
         
         // Google認証をサインアウト
-        if (typeof gapi !== 'undefined' && gapi.auth2) {
-          const auth2 = gapi.auth2.getAuthInstance();
-          if (auth2) {
-            auth2.signOut().then(() => {
-              // ページをリロード
-              window.location.reload();
-            });
-          } else {
-            // gapi.auth2が初期化されていない場合はリロードのみ
+        if (googleAuth2Instance) {
+          googleAuth2Instance.signOut().then(() => {
+            // ページをリロード
             window.location.reload();
-          }
+          });
         } else {
           window.location.reload();
         }
@@ -851,4 +900,3 @@
     </script>
   </body>
 </html>
-          
