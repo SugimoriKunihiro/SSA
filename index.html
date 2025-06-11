@@ -34,17 +34,6 @@
       }
 
       /* ホバーゾーンとナビゲーションバー */
-      #nav-hover-zone {
-        position: fixed;
-        top: 0;
-        left: 0;
-        height: 30px;
-        width: 100vw;
-        background: transparent;
-        z-index: 100;
-        pointer-events: auto;
-      }
-
       #nav-hover-bar {
         position: fixed;
         top: 0;
@@ -54,13 +43,7 @@
         background-color: #343a40;
         color: white;
         z-index: 101;
-        transform: translateY(-100%);
-        transition: transform 0.4s ease-in-out;
         pointer-events: auto;
-      }
-
-      #nav-hover-bar.active {
-        transform: translateY(0%);
       }
 
       /* フルスクリーンAppSheetコンテナ - 参考コードから取得 */
@@ -71,6 +54,7 @@
         width: 100vw;
         height: 100vh;
         z-index: 0;
+        padding-top: 40px; /* メニューバーの高さ分の余白を追加 */
       }
 
       .fullscreen-appsheet iframe {
@@ -264,13 +248,10 @@
     <!-- メインアプリ -->
     <div id="app">
       <!-- ホバーゾーンとナビ - 参考コードのように単純化 -->
-      <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div>
+      <!-- <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div> -->
       <nav 
         id="nav-hover-bar"
-        class="navbar navbar-expand-lg navbar-dark bg-secondary px-3"
-        :class="{ active: showNav }"
-        @mouseenter="showNav = true"
-        @mouseleave="showNav = false">
+        class="navbar navbar-expand-lg navbar-dark bg-secondary px-3">
         <h3 class="navbar-brand" @click="toggle('99999')">ARIEL</h3>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
           aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
@@ -377,7 +358,7 @@
             width: '100%',
             height: '100%',
             border: 'none',
-            pointerEvents: showNav ? 'none' : 'auto'
+            pointerEvents: 'auto'
           }"
           allowfullscreen
           allow="clipboard-read; clipboard-write;"
@@ -588,41 +569,17 @@
           userEmail: ''
         },
         mounted() {
-          window.addEventListener('mousemove', this.handleMouseMove);
-          
           // ローカルストレージからユーザー情報を取得
           const email = localStorage.getItem('ariel_email');
           this.userEmail = email || 'ゲスト';
-          
           // AppSheetを自動的に選択
           this.showContents = ["99999"];
-          
-          // ナビゲーションバーを最初は非表示に
-          this.showNav = false;
         },
         beforeDestroy() {
-          window.removeEventListener('mousemove', this.handleMouseMove);
         },
         methods:{
-          handleMouseMove(e) {
-            const y = e.clientY;
-            this.showNav = (y < 30); // ホバーゾーンの高さに合わせる
-            
-            // ナビゲーションバーが表示されている場合、5秒後に自動的に閉じる
-            if (this.showNav) {
-              clearTimeout(this.navTimeout);
-              this.navTimeout = setTimeout(() => {
-                this.showNav = false;
-              }, 5000);
-            }
-          },
           toggle: function(data) {
             this.showContents = [data];
-            
-            // ナビゲーションバーを閉じる（AppSheetの表示を邪魔しないように）
-            setTimeout(() => {
-              this.showNav = false;
-            }, 300);
           },
           handleIframeLoad() {
             console.log('iframeがロードされました');
@@ -651,9 +608,6 @@
             setTimeout(() => {
               this.showTooltip = false;
             }, 3000);
-            
-            // ナビゲーションバーを確実に非表示にする
-            this.showNav = false;
             
             // iframe内のdocumentにアクセスを試みる
             try {
