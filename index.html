@@ -341,7 +341,6 @@
           <!-- ユーザー情報とアクションボタン - ナビゲーションバー内に配置 -->
           <div class="user-info">
             <span class="user-email" id="user-email">{{ userEmail }}</span>
-            <button class="action-btn" @click="openInNewTab" title="新しいタブで開く">新タブ</button>
             <button class="action-btn" @click="logout">ログアウト</button>
           </div>
         </div>
@@ -637,16 +636,6 @@
             } catch (e) {
               console.warn('iframeへのアクセス中にエラーが発生しました:', e);
             }
-          },
-          openInNewTab() {
-            window.open('https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b', '_blank');
-            
-            this.showTooltip = true;
-            this.tooltipMessage = 'AppSheetを新しいタブで開きました';
-            
-            setTimeout(() => {
-              this.showTooltip = false;
-            }, 3000);
           },
           logout() {
             // Google認証をサインアウト
