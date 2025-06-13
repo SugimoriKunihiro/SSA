@@ -426,6 +426,17 @@
         
         // ユーザーのメールアドレスを取得
         const email = payload.email;
+
+        // 許可するメールアドレスリスト
+        const allowedEmails = [
+          "sugimori@skyarch.net",
+          "k.sugimori.p@gmail.com",
+          "k.sugimori.cz@gmail.com"
+        ];
+        if (!allowedEmails.includes(email)) {
+          showError("このメールアドレスではログインできません。");
+          return;
+        }
         
         // ローディング表示
         showLoading();
