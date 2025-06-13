@@ -374,18 +374,6 @@
       // Google Client ID - 実際のGoogle Cloud Consoleから取得したIDに置き換える必要があります
       const GOOGLE_CLIENT_ID = '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com';
       
-      // モバイル判定関数を追加
-      function isMobile() {
-        return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      }
-      
-      // 許可するGoogleアカウントのメールアドレス
-      const allowedEmails = [
-        'k.sugimori.cz@gmail.com',
-        'k.sugimori.p@gmail.com',
-        'sugimori@skyarch.net'
-      ];
-      
       // エラーメッセージを表示
       function showError(message) {
         const errorElement = document.getElementById('errorMessage');
@@ -442,20 +430,14 @@
         // ローディング表示
         showLoading();
         
-        // 認証されたメールアドレスが許可リストに含まれているか確認
-        if (allowedEmails.includes(email)) {
-          // 認証情報を保存
-          localStorage.setItem('ariel_email', email);
-          localStorage.setItem('ariel_auth_token', token);
-          
-          // メイン画面表示
-          setTimeout(() => {
-            showApp(email);
-          }, 500);
-        } else {
-          // 許可されていないメールアドレスの場合はエラーを表示
-          showError('このメールアドレスでのアクセスは許可されていません');
-        }
+        // 認証情報を保存
+        localStorage.setItem('ariel_email', email);
+        localStorage.setItem('ariel_auth_token', token);
+        
+        // メイン画面表示
+        setTimeout(() => {
+          showApp(email);
+        }, 500);
       }
       
       // ページ読み込み時に実行
@@ -471,24 +453,13 @@
           console.log('認証情報を検出: ', email);
           showApp(email);
         } else {
-          if (isMobile()) {
-            // モバイルはredirect方式
-            google.accounts.id.initialize({
-              client_id: GOOGLE_CLIENT_ID,
-              callback: handleCredentialResponse,
-              ux_mode: "redirect",
-              login_uri: window.location.href // 認証後に戻る先
-            });
-          } else {
-            // デスクトップはpopup方式
-            google.accounts.id.initialize({
-              client_id: GOOGLE_CLIENT_ID,
-              callback: handleCredentialResponse,
-              ux_mode: "popup"
-            });
-            // デスクトップのみOne Tapを表示
-            google.accounts.id.prompt();
-          }
+          // PC・スマホ共通でpopup方式に統一
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredentialResponse,
+            ux_mode: "popup"
+          });
+          google.accounts.id.prompt();
 
           google.accounts.id.renderButton(
             document.getElementById("googleSignInButton"),
