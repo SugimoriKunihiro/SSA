@@ -36,15 +36,30 @@
 
       /* ホバーゾーンとナビゲーションバー */
       #nav-hover-bar {
-        position: fixed;
+        position: fixed !important;
         top: 0;
         left: 0;
         width: 100vw;
-        height: 40px;
+        height: 28px !important;
+        min-height: 28px !important;
+        max-height: 28px !important;
         background-color: #343a40;
         color: white;
         z-index: 101;
         pointer-events: auto;
+        padding: 0.1rem 0.5rem !important;
+      }
+      
+      #nav-hover-bar .navbar-brand {
+        font-size: 0.9rem !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1 !important;
+      }
+      
+      #nav-hover-bar .nav-link {
+        padding: 0.2rem 0.5rem !important;
+        font-size: 0.8rem !important;
       }
 
       /* フルスクリーンAppSheetコンテナ - 参考コードから取得 */
@@ -55,7 +70,7 @@
         width: 100vw;
         height: 100vh;
         z-index: 0;
-        padding-top: 40px; /* メニューバーの高さ分の余白を追加 */
+        padding-top: 28px;
       }
 
       .fullscreen-appsheet iframe {
@@ -172,6 +187,66 @@
       
       .action-btn:hover {
         background-color: rgba(255, 255, 255, 0.3);
+      }
+
+      /* レスポンシブ対応 */
+      @media (max-width: 991px) {
+        #nav-hover-bar {
+          height: auto !important;
+          min-height: 28px !important;
+          max-height: none !important;
+        }
+        
+        .fullscreen-appsheet {
+          padding-top: 28px;
+        }
+        
+        .navbar-collapse.show,
+        .navbar-collapse.collapsing {
+          position: absolute;
+          top: 28px;
+          left: 0;
+          width: 100%;
+          background-color: #343a40;
+          z-index: 100;
+        }
+        
+        .user-info {
+          width: 100%;
+          justify-content: space-between;
+          margin: 4px 0;
+          padding: 0 10px;
+        }
+        
+        .user-email {
+          max-width: 150px;
+          font-size: 0.7rem;
+        }
+      }
+      
+      @media (max-width: 576px) {
+        .fullscreen-appsheet {
+          padding-top: 28px;
+        }
+        
+        .user-email {
+          max-width: 120px;
+          font-size: 0.65rem;
+        }
+        
+        .action-btn {
+          padding: 2px 6px;
+          font-size: 0.65rem;
+        }
+        
+        #nav-hover-bar .navbar-brand {
+          font-size: 0.8rem !important;
+        }
+        
+        .navbar-toggler {
+          padding: 0.1rem 0.3rem !important;
+          font-size: 0.8rem !important;
+        }
       }
 
       #loading-view {
