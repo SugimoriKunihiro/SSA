@@ -55,6 +55,7 @@
         margin: 0 !important;
         padding: 0 !important;
         line-height: 1 !important;
+        cursor: pointer;
       }
       
       #nav-hover-bar .nav-link {
@@ -380,7 +381,12 @@
             <li class="nav-item dropdown">
               <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
               <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="tool in tools" :key="tool.id" class="dropdown-item" v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
+                <a v-for="tool in tools" :key="tool.id" class="dropdown-item" 
+                   v-if="tool.name === 'ConsultingFlow/AURA'"
+                   @click="toggle(tool.id)">{{tool.name}}</a>
+                <a v-for="tool in tools" :key="tool.id" class="dropdown-item" 
+                   v-if="tool.name !== 'ConsultingFlow/AURA'"
+                   v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
               </div>
             </li>
             <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
@@ -431,6 +437,24 @@
           src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
           scrolling="no"
           id="appsheetFrame"
+          :style="{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: 'auto'
+          }"
+          allowfullscreen
+          allow="clipboard-read; clipboard-write;"
+          @load="handleIframeLoad">
+        </iframe>
+      </div>
+      
+      <!-- ConsultingFlow/AURA iframe -->
+      <div class="fullscreen-appsheet" id="consulting-container-4002" v-show="showContents[0] === '4002'">
+        <iframe
+          src="https://udify.app/chat/Tl7zVpM12wSIX0K2"
+          scrolling="no"
+          id="consultingFrame"
           :style="{
             width: '100%',
             height: '100%',
