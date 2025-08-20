@@ -566,9 +566,26 @@
         }, 500);
       }
       
+      // Google Sign-In初期化関数
+      function initializeGoogleSignIn() {
+        console.log('Google Sign-In初期化開始');
+        
+        google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleCredentialResponse
+        });
+        
+        google.accounts.id.renderButton(
+          document.getElementById("googleSignInButton"),
+          { theme: "outline", size: "large" }
+        );
+        
+        console.log('Google Sign-In初期化完了');
+      }
+      
       // ページ読み込み時に実行
-      document.addEventListener('DOMContentLoaded', function() {
-        console.log('DOM読み込み完了');
+      window.onload = function() {
+        console.log('ページ読み込み完了');
         
         // ローカルストレージのチェック
         const email = localStorage.getItem('ariel_email');
@@ -579,28 +596,19 @@
           console.log('認証情報を検出: ', email);
           showApp(email);
         } else {
-          // PC・スマホ共通でpopup方式に統一
-          google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleCredentialResponse,
-            ux_mode: "popup"
-          });
-          google.accounts.id.prompt();
-
-          google.accounts.id.renderButton(
-            document.getElementById("googleSignInButton"),
-            { 
-              theme: "outline", 
-              size: "large",
-              type: "standard",
-              shape: "rectangular",
-              text: "signin_with",
-              logo_alignment: "left",
-              width: 280
+          // Google APIが利用可能になるまで待機
+          const waitForGoogle = () => {
+            if (window.google && window.google.accounts) {
+              initializeGoogleSignIn();
+            } else {
+              setTimeout(waitForGoogle, 100);
             }
-          );
+          };
+          waitForGoogle();
         }
-      });
+      };
+      
+
       
       // Vue インスタンス作成 - シンプル化して必要な機能だけ残す
       window.app = new Vue({
