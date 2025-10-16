@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>ARIEL</title>
+    <title>Sylpheed</title>
     <base target="_top">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
@@ -368,7 +368,7 @@
       <nav 
         id="nav-hover-bar"
         class="navbar navbar-expand-lg navbar-dark px-3" style="background-color: #495057 !important;">
-        <h3 class="navbar-brand" @click="toggle('99999')">ARIEL</h3>
+        <h3 class="navbar-brand" @click="toggleView">Sylpheed</h3>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
           aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
           <span class="navbar-toggler-icon"></span>
@@ -463,8 +463,8 @@
       <!-- ツールチップメッセージ -->
       <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
 
-      <!-- iframe全画面 - 参考コードの構造を採用 -->
-      <div class="fullscreen-appsheet" id="appsheet-container-99999" v-show="showContents[0] === '99999'">
+      <!-- AppSheet iframe -->
+      <div class="fullscreen-appsheet" v-show="currentView === 'appsheet'">
         <iframe
           src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
           scrolling="no"
@@ -478,6 +478,21 @@
           allowfullscreen
           allow="clipboard-read; clipboard-write;"
           @load="handleIframeLoad">
+        </iframe>
+      </div>
+      
+      <!-- ChatKit iframe -->
+      <div class="fullscreen-appsheet" v-show="currentView === 'chatkit'">
+        <iframe
+          src="https://chat-kit-front.vercel.app/"
+          scrolling="no"
+          :style="{
+            width: '100%',
+            height: '100%',
+            border: 'none',
+            pointerEvents: 'auto'
+          }"
+          allowfullscreen>
         </iframe>
       </div>
       
@@ -689,23 +704,31 @@
             {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
           ],
           showContents:["99999"],
-          showNav: false, // 初期状態では非表示
+          showNav: false,
           tooltipMessage: '',
           showTooltip: false,
-          userEmail: ''
+          userEmail: '',
+          currentView: 'chatkit'
         },
         mounted() {
-          // ローカルストレージからユーザー情報を取得
           const email = localStorage.getItem('ariel_email');
           this.userEmail = email || 'ゲスト';
-          // AppSheetを自動的に選択
           this.showContents = ["99999"];
+          this.currentView = 'chatkit';
         },
         beforeDestroy() {
         },
         methods:{
           toggle: function(data) {
             this.showContents = [data];
+          },
+          toggleView: function() {
+            this.currentView = this.currentView === 'appsheet' ? 'chatkit' : 'appsheet';
+            this.showTooltip = true;
+            this.tooltipMessage = this.currentView === 'chatkit' ? 'ChatKitに切り替えました' : 'AppSheetに切り替えました';
+            setTimeout(() => {
+              this.showTooltip = false;
+            }, 2000);
           },
           handleIframeLoad() {
             console.log('iframeがロードされました');
