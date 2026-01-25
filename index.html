@@ -729,41 +729,17 @@
           handleIframeLoad() {
             console.log('iframeがロードされました');
 
-            // AppSheetの表示位置調整を繰り返す
-            for (let i = 0; i < 5; i++) {
-              setTimeout(() => {
-                window.scrollTo(0, 0);
-                console.log(`scrollTo called (${i + 1})`);
-              }, 300 * (i + 1));
-            }
+            // AppSheetを画面に収めるため、1回だけスクロール調整
+            setTimeout(() => {
+              window.scrollTo(0, 0);
+            }, 300);
             
-            // フレームが完全に読み込まれたことを通知
+            // 通知表示
             this.showTooltip = true;
             this.tooltipMessage = 'AppSheetが読み込まれました';
-            
-            // AppSheetが「全体表示されている」と認識させるためスクロール位置調整
-            setTimeout(() => {
-              window.scrollTo(0, 0);
-            }, 200);
-
-            setTimeout(() => {
-              window.scrollTo(0, 0);
-            }, 1000);
-
             setTimeout(() => {
               this.showTooltip = false;
             }, 3000);
-            
-            // iframe内のdocumentにアクセスを試みる
-            try {
-              const iframe = document.getElementById('appsheetFrame');
-              if (iframe) {
-                // iframe全体を画面に収めるように調整
-                window.scrollTo(0, 0);
-              }
-            } catch (e) {
-              console.warn('iframeへのアクセス中にエラーが発生しました:', e);
-            }
           },
           logout() {
             // Google認証をサインアウト
