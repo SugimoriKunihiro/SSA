@@ -463,8 +463,8 @@
       <!-- ツールチップメッセージ -->
       <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
 
-      <!-- AppSheet iframe - v-ifで完全にアンマウント -->
-      <div class="fullscreen-appsheet" v-if="currentView === 'appsheet'">
+      <!-- AppSheet iframe - v-showで状態保持 -->
+      <div class="fullscreen-appsheet" v-show="currentView === 'appsheet'">
         <iframe
           src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
           scrolling="no"
