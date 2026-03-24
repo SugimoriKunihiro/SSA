@@ -464,7 +464,7 @@
       <!-- AppSheet iframe - v-showで状態保持 -->
       <div class="fullscreen-appsheet" v-show="currentView === 'appsheet'">
         <iframe
-          src="https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b"
+          :src="appsheetLoaded ? 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b' : 'about:blank'"
           scrolling="no"
           id="appsheetFrame"
           :style="{
@@ -482,7 +482,7 @@
       <!-- ChatKit iframe - v-showで状態保持 -->
       <div class="fullscreen-appsheet" v-show="currentView === 'chatkit'">
         <iframe
-          src="https://chat-kit-front.vercel.app/"
+          :src="chatkitLoaded ? 'https://chat-kit-front.vercel.app/' : 'about:blank'"
           scrolling="no"
           :style="{
             width: '100%',
@@ -729,13 +729,16 @@
           tooltipMessage: '',
           showTooltip: false,
           userEmail: '',
-          currentView: 'chatkit'
+          currentView: 'chatkit',
+          appsheetLoaded: false,
+          chatkitLoaded: true
         },
         mounted() {
           const email = localStorage.getItem('ariel_email');
           this.userEmail = email || 'ゲスト';
           this.showContents = ["99999"];
           this.currentView = 'chatkit';
+          this.chatkitLoaded = true;
         },
         beforeDestroy() {
         },
@@ -745,6 +748,11 @@
           },
           toggleView: function() {
             this.currentView = this.currentView === 'appsheet' ? 'chatkit' : 'appsheet';
+            if (this.currentView === 'appsheet') {
+              this.appsheetLoaded = true;
+            } else {
+              this.chatkitLoaded = true;
+            }
             this.showTooltip = true;
             this.tooltipMessage = this.currentView === 'chatkit' ? 'ChatKitに切り替えました' : 'AppSheetに切り替えました';
             setTimeout(() => {
@@ -768,8 +776,8 @@
           },
           logout() {
             // Google認証をサインアウト
-            if (google && google.accounts && google.accounts.id) {
-              google.accounts.id.disableAutoSelect();
+            if (window.google && window.google.accounts && window.google.accounts.id) {
+              window.google.accounts.id.disableAutoSelect();
             }
             
             // ローカルストレージから認証情報を削除
