@@ -1,798 +1,839 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Sylpheed</title>
-    <base target="_top">
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"    
-      integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" 
-      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" 
-      integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" 
-      integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
-    <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2708.png">
 
-    <style>
-      /* 共通スタイル */
-      html, body {
-        margin: 0;
-        height: 100%;
-        background-color: #212529;
-        color: white;
-      }
+<head>
+  <title>SYLPHEED</title>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css"
+    integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+    integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+    crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js"
+    integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut"
+    crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js"
+    integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k"
+    crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12"></script>
+  <link rel="icon" type="image/png" href="https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/2708.png">
 
-      /* メインアプリスタイル */
-      #app {
-        height: 100%;
-        overflow: hidden;
-        display: none; /* 最初は非表示 */
-      }
+  <style>
+    /* 共通スタイル */
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background-color: #212529;
+      color: white;
+    }
 
-      /* ホバーゾーンとナビゲーションバー */
+    /* メインアプリスタイル */
+    #app {
+      height: 100%;
+      overflow: hidden;
+      display: none;
+      /* 最初は非表示 */
+    }
+
+    /* ホバーゾーンとナビゲーションバー */
+    #nav-hover-bar {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 28px !important;
+      min-height: 28px !important;
+      max-height: 28px !important;
+      background-color: #212529;
+      color: white;
+      z-index: 101;
+      pointer-events: auto;
+      padding: 0.1rem 0.5rem !important;
+    }
+
+    #nav-hover-bar .navbar-brand {
+      font-size: 1.2rem !important;
+      font-weight: 700 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      line-height: 1 !important;
+      cursor: pointer;
+      color: #ffffff !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    #nav-hover-bar .navbar-brand:hover {
+      color: #e3f2fd !important;
+      transform: scale(1.05);
+    }
+
+    #nav-hover-bar .nav-link {
+      padding: 0.2rem 0.5rem !important;
+      font-size: 0.8rem !important;
+      font-weight: 600 !important;
+      color: #ffffff !important;
+      transition: background-color 0.2s ease;
+    }
+
+    #nav-hover-bar .nav-link:hover {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+      border-radius: 4px;
+    }
+
+    /* フルスクリーンAppSheetコンテナ - 参考コードから取得 */
+    .fullscreen-appsheet {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100dvh;
+      /* dvh = Dynamic Viewport Height (スマホブラウザのURLバー考慮) */
+      z-index: 0;
+      padding-top: 28px;
+    }
+
+    .fullscreen-appsheet iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    /* AppSheetヘルパーのスタイル */
+    .appsheet-helper {
+      opacity: 0.95;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+
+    .appsheet-helper:hover {
+      opacity: 1;
+    }
+
+    /* 認証関連のスタイル */
+    #auth-page {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100dvh;
+      /* dvh = Dynamic Viewport Height (スマホブラウザのURLバー考慮) */
+      width: 100vw;
+      background-color: #212529;
+    }
+
+    .auth-container {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 40px 30px 30px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .ssa-ascii {
+      font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.4;
+      color: #4A9EFF;
+      white-space: pre;
+      margin-bottom: 24px;
+      text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
+      letter-spacing: 0.5px;
+    }
+
+    .ssa-subtitle {
+      font-family: 'SF Mono', Consolas, monospace;
+      font-size: 10px;
+      color: #666;
+      letter-spacing: 2px;
+      margin-bottom: 30px;
+    }
+
+    .title {
+      display: none;
+    }
+
+    .login-methods {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .custom-signin-button {
+      background-color: white;
+      color: #444;
+      border-radius: 5px;
+      border: none;
+      padding: 10px 15px;
+      font-weight: bold;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .custom-signin-button:hover {
+      background-color: #f1f1f1;
+    }
+
+    .custom-signin-button img {
+      margin-right: 10px;
+      width: 18px;
+      height: 18px;
+    }
+
+    #errorMessage {
+      color: #ff6b6b;
+      margin-top: 15px;
+      display: none;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* ユーザー情報表示 - ナビゲーションバー内に配置 */
+    .user-info {
+      display: flex;
+      align-items: center;
+      margin-left: auto;
+      margin-right: 10px;
+    }
+
+    .user-email {
+      margin-right: 10px;
+      font-size: 0.8rem;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .action-btn {
+      background-color: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 2px 8px;
+      margin-left: 5px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+    }
+
+    .action-btn:hover {
+      background-color: rgba(255, 255, 255, 0.3);
+    }
+
+    /* レスポンシブ対応 */
+    @media (max-width: 991px) {
       #nav-hover-bar {
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 28px !important;
+        height: auto !important;
         min-height: 28px !important;
-        max-height: 28px !important;
-        background-color: #212529;
-        color: white;
-        z-index: 101;
-        pointer-events: auto;
-        padding: 0.1rem 0.5rem !important;
-      }
-      
-      #nav-hover-bar .navbar-brand {
-        font-size: 1.2rem !important;
-        font-weight: 700 !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        line-height: 1 !important;
-        cursor: pointer;
-        color: #ffffff !important;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-        transition: all 0.2s ease;
-      }
-      
-      #nav-hover-bar .navbar-brand:hover {
-        color: #e3f2fd !important;
-        transform: scale(1.05);
-      }
-      
-      #nav-hover-bar .nav-link {
-        padding: 0.2rem 0.5rem !important;
-        font-size: 0.8rem !important;
-        font-weight: 600 !important;
-        color: #ffffff !important;
-        transition: background-color 0.2s ease;
-      }
-      
-      #nav-hover-bar .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        border-radius: 4px;
+        max-height: none !important;
       }
 
-      /* フルスクリーンAppSheetコンテナ - 参考コードから取得 */
       .fullscreen-appsheet {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100dvh; /* dvh = Dynamic Viewport Height (スマホブラウザのURLバー考慮) */
-        z-index: 0;
         padding-top: 28px;
       }
 
-      .fullscreen-appsheet iframe {
+      .navbar-collapse.show,
+      .navbar-collapse.collapsing {
+        position: absolute;
+        top: 28px;
+        left: 0;
         width: 100%;
-        height: 100%;
-        border: none;
-      }
-      
-      /* AppSheetヘルパーのスタイル */
-      .appsheet-helper {
-        opacity: 0.95;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        transition: opacity 0.3s ease;
-        z-index: 1000;
-      }
-      
-      .appsheet-helper:hover {
-        opacity: 1;
-      }
-
-      /* 認証関連のスタイル */
-      #auth-page {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        height: 100dvh; /* dvh = Dynamic Viewport Height (スマホブラウザのURLバー考慮) */
-        width: 100vw;
         background-color: #212529;
+        z-index: 100;
       }
 
-      .auth-container {
-        background-color: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 30px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        max-width: 400px;
-        width: 100%;
-        text-align: center;
-      }
-
-      .title {
-        margin-bottom: 30px;
-        font-size: 2rem;
-      }
-
-      .login-methods {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-      }
-
-      .custom-signin-button {
-        background-color: white;
-        color: #444;
-        border-radius: 5px;
-        border: none;
-        padding: 10px 15px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: background-color 0.3s;
-      }
-
-      .custom-signin-button:hover {
-        background-color: #f1f1f1;
-      }
-
-      .custom-signin-button img {
-        margin-right: 10px;
-        width: 18px;
-        height: 18px;
-      }
-
-      #errorMessage {
-        color: #ff6b6b;
-        margin-top: 15px;
-        display: none;
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      /* ユーザー情報表示 - ナビゲーションバー内に配置 */
       .user-info {
-        display: flex;
-        align-items: center;
-        margin-left: auto;
-        margin-right: 10px;
+        width: 100%;
+        justify-content: space-between;
+        margin: 4px 0;
+        padding: 0 10px;
       }
-      
+
       .user-email {
-        margin-right: 10px;
-        font-size: 0.8rem;
-        max-width: 200px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        max-width: 150px;
+        font-size: 0.7rem;
       }
-      
+    }
+
+    @media (max-width: 576px) {
+      .fullscreen-appsheet {
+        padding-top: 28px;
+      }
+
+      .user-email {
+        max-width: 120px;
+        font-size: 0.65rem;
+      }
+
       .action-btn {
-        background-color: rgba(255, 255, 255, 0.2);
-        color: white;
-        border: none;
-        padding: 2px 8px;
-        margin-left: 5px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        cursor: pointer;
-      }
-      
-      .action-btn:hover {
-        background-color: rgba(255, 255, 255, 0.3);
+        padding: 2px 6px;
+        font-size: 0.65rem;
       }
 
-      /* レスポンシブ対応 */
-      @media (max-width: 991px) {
-        #nav-hover-bar {
-          height: auto !important;
-          min-height: 28px !important;
-          max-height: none !important;
-        }
-        
-        .fullscreen-appsheet {
-          padding-top: 28px;
-        }
-        
-        .navbar-collapse.show,
-        .navbar-collapse.collapsing {
-          position: absolute;
-          top: 28px;
-          left: 0;
-          width: 100%;
-          background-color: #212529;
-          z-index: 100;
-        }
-        
-        .user-info {
-          width: 100%;
-          justify-content: space-between;
-          margin: 4px 0;
-          padding: 0 10px;
-        }
-        
-        .user-email {
-          max-width: 150px;
-          font-size: 0.7rem;
-        }
-      }
-      
-      @media (max-width: 576px) {
-        .fullscreen-appsheet {
-          padding-top: 28px;
-        }
-        
-        .user-email {
-          max-width: 120px;
-          font-size: 0.65rem;
-        }
-        
-        .action-btn {
-          padding: 2px 6px;
-          font-size: 0.65rem;
-        }
-        
-        #nav-hover-bar .navbar-brand {
-          font-size: 0.8rem !important;
-        }
-        
-        .navbar-toggler {
-          padding: 0.1rem 0.3rem !important;
-          font-size: 0.8rem !important;
-        }
-      }
-
-      #loading-view {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-      }
-
-      /* 通知ツールチップ */
-      .tooltip-message {
-        position: fixed;
-        top: 60px;
-        left: 50%;
-        transform: translateX(-50%);
-        background-color: rgba(0, 0, 0, 0.7);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 4px;
-        z-index: 1000;
-        font-size: 14px;
-        opacity: 0;
-        transition: opacity 0.3s;
-        pointer-events: none;
-      }
-
-      .tooltip-message.show {
-        opacity: 1;
-      }
-      
-      /* GoogleボタンコンテナのスタイルをカスタマイズするためのCSS */
-      .g-signin2-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 15px;
-      }
-      
-      /* Googleのサインインボタンをカスタマイズ */
-      #googleSignInButton {
-        width: 100% !important;
-        min-width: 200px;
-        min-height: 48px;
-      }
-      
-      /* ドロップダウンメニューのスタイル */
-      .dropdown-menu {
-        background-color: #495057 !important;
-        border: 1px solid #6c757d !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
-      }
-      
-      .dropdown-item {
-        color: #ffffff !important;
-        transition: background-color 0.2s ease;
+      #nav-hover-bar .navbar-brand {
         font-size: 0.8rem !important;
-        padding: 0.3rem 0.75rem !important;
       }
-      
-      .dropdown-item:hover,
-      .dropdown-item:focus {
-        background-color: #6c757d !important;
-        color: #ffffff !important;
-      }
-    </style>
-  </head>
 
-  <body>
-    <!-- 認証ページ -->
-    <div id="auth-page">
-      <div class="auth-container">
-        <h1 class="title">Sylpheed ポータル</h1>
-        
-        <div id="login-view">
-          <p>続行するには認証が必要です</p>
-          
-          <div class="login-methods">
-            <!-- Google サインインボタンコンテナ -->
-            <div class="g-signin2-container">
-              <div id="googleSignInButton"></div>
-            </div>
+      .navbar-toggler {
+        padding: 0.1rem 0.3rem !important;
+        font-size: 0.8rem !important;
+      }
+    }
+
+    #loading-view {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 通知ツールチップ */
+    .tooltip-message {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 8px 15px;
+      border-radius: 4px;
+      z-index: 1000;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .tooltip-message.show {
+      opacity: 1;
+    }
+
+    /* GoogleボタンコンテナのスタイルをカスタマイズするためのCSS */
+    .g-signin2-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    /* Googleのサインインボタンをカスタマイズ */
+    #googleSignInButton {
+      width: 100% !important;
+      min-width: 200px;
+      min-height: 48px;
+    }
+
+    /* ドロップダウンメニューのスタイル */
+    .dropdown-menu {
+      background-color: #495057 !important;
+      border: 1px solid #6c757d !important;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .dropdown-item {
+      color: #ffffff !important;
+      transition: background-color 0.2s ease;
+      font-size: 0.8rem !important;
+      padding: 0.3rem 0.75rem !important;
+    }
+
+    .dropdown-item:hover,
+    .dropdown-item:focus {
+      background-color: #6c757d !important;
+      color: #ffffff !important;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 認証ページ -->
+  <div id="auth-page">
+    <div class="auth-container">
+      <h1 class="title">Sylpheed ポータル</h1>
+        <div class="ssa-ascii">
+ ╔══════════════════════════════════════╗
+ ║   Super SYLPHEED Architecture       ║
+ ╠══════════════════════════════════════╣
+ ║     S  Symphonic                    ║
+ ║     Y  Your-access                  ║
+ ║     L  Layered                      ║
+ ║     P  Personal                     ║
+ ║     H  Hub for                      ║
+ ║     E  Every                        ║
+ ║     E  Entry &amp;                      ║
+ ║     D  Device                       ║
+ ╚══════════════════════════════════════╝</div>
+        <div class="ssa-subtitle">Personal · Multi-LLM · Multi-device · Orchestrated</div>
+
+      <div id="login-view">
+        <p style="font-family: monospace; color: #888; font-size: 12px; letter-spacing: 1px;">Authentication required</p>
+
+        <div class="login-methods">
+          <!-- Google サインインボタンコンテナ -->
+          <div class="g-signin2-container">
+            <div id="googleSignInButton"></div>
           </div>
-          
-          <div id="errorMessage"></div>
         </div>
-        
-        <div id="loading-view" class="hidden">
-          <div class="d-flex justify-content-center">
-            <div class="spinner-border text-light" role="status">
-              <span class="sr-only">Loading...</span>
-            </div>
+
+        <div id="errorMessage"></div>
+      </div>
+
+      <div id="loading-view" class="hidden">
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border text-light" role="status" style="color: #4A9EFF !important;">
+            <span class="sr-only">Loading...</span>
           </div>
-          <p class="mt-3">認証中...</p>
         </div>
+        <p class="mt-3" style="font-family: monospace; color: #4A9EFF; font-size: 13px;">Initializing SSA...</p>
       </div>
     </div>
+  </div>
 
-    <!-- メインアプリ -->
-    <div id="app">
-      <!-- ホバーゾーンとナビ - 参考コードのように単純化 -->
-      <!-- <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div> -->
-      <nav 
-        id="nav-hover-bar"
-        class="navbar navbar-expand-lg navbar-dark px-3" style="background-color: #495057 !important;">
-        <h3 class="navbar-brand" @click="toggleView">Sylpheed</h3>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
-          aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-          <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!--ドロップダウンリストここから-->
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-          <ul class="navbar-nav">
-   
-           <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="knowledge in knowledges" :key="knowledge.id" class="dropdown-item" v-bind:href="knowledge.url" target="_blank">{{knowledge.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-            
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="learning in learnings" :key="learning.id" class="dropdown-item" v-bind:href="learning.url" target="_blank">{{learning.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-        
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="drive in drives" :key="drive.id" class="dropdown-item" v-bind:href="drive.url" target="_blank">{{drive.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+  <!-- メインアプリ -->
+  <div id="app">
+    <!-- ホバーゾーンとナビ - 参考コードのように単純化 -->
+    <!-- <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div> -->
+    <nav id="nav-hover-bar" class="navbar navbar-expand-lg navbar-dark px-3"
+      style="background-color: #495057 !important;">
+      <h3 class="navbar-brand" @click="toggleView">SYLPHEED</h3>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavDropdown"
+        aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
 
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="gsuite in gsuites" :key="gsuite.id" class="dropdown-item" v-bind:href="gsuite.url" target="_blank">{{gsuite.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+      <!--ドロップダウンリストここから-->
+      <div class="collapse navbar-collapse" id="navbarNavDropdown">
+        <ul class="navbar-nav">
 
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="tool in tools" :key="tool.id" class="dropdown-item" v-bind:href="tool.url" target="_blank">{{tool.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Knowledge</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="knowledge in knowledges" :key="knowledge.id" class="dropdown-item" v-bind:href="knowledge.url"
+                target="_blank">{{knowledge.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
 
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="it in its" :key="it.id" class="dropdown-item" v-bind:href="it.url" target="_blank">{{it.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Learning</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="learning in learnings" :key="learning.id" class="dropdown-item" v-bind:href="learning.url"
+                target="_blank">{{learning.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
 
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-            <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="tv in tvs" :key="tv.id" class="dropdown-item" v-bind:href="tv.url" target="_blank">{{tv.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Drive</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="drive in drives" :key="drive.id" class="dropdown-item" v-bind:href="drive.url"
+                target="_blank">{{drive.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
 
-            <!--カテゴリ毎ドロップダウン(リンク)ここから-->
-             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
-              <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
-                <a v-for="prv in prvs" :key="prv.id" class="dropdown-item" v-bind:href="prv.url" target="_blank">{{prv.name}}</a>
-              </div>
-            </li>
-            <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
-          </ul>
-          
-          <!-- ユーザー情報とアクションボタン - ナビゲーションバー内に配置 -->
-          <div class="user-info">
-            <span class="user-email" id="user-email">{{ userEmail }}</span>
-            <button class="action-btn" @click="logout">ログアウト</button>
-          </div>
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Google</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="gsuite in gsuites" :key="gsuite.id" class="dropdown-item" v-bind:href="gsuite.url"
+                target="_blank">{{gsuite.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">App</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="tool in tools" :key="tool.id" class="dropdown-item" v-bind:href="tool.url"
+                target="_blank">{{tool.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">IT</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="it in its" :key="it.id" class="dropdown-item" v-bind:href="it.url"
+                target="_blank">{{it.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">Media</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="tv in tvs" :key="tv.id" class="dropdown-item" v-bind:href="tv.url"
+                target="_blank">{{tv.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+
+          <!--カテゴリ毎ドロップダウン(リンク)ここから-->
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" role="button" data-toggle="dropdown">SNS/Private</a>
+            <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+              <a v-for="prv in prvs" :key="prv.id" class="dropdown-item" v-bind:href="prv.url"
+                target="_blank">{{prv.name}}</a>
+            </div>
+          </li>
+          <!--カテゴリ毎ドロップダウン(リンク)ここまで-->
+        </ul>
+
+        <!-- ユーザー情報とアクションボタン - ナビゲーションバー内に配置 -->
+        <div class="user-info">
+          <span class="user-email" id="user-email">{{ userEmail }}</span>
+          <button class="action-btn" @click="logout">ログアウト</button>
         </div>
-        <!--ドロップダウンリストここまで-->
-      </nav>
+      </div>
+      <!--ドロップダウンリストここまで-->
+    </nav>
 
-      <!-- ツールチップメッセージ -->
-      <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
+    <!-- ツールチップメッセージ -->
+    <div class="tooltip-message" :class="{ show: showTooltip }">{{ tooltipMessage }}</div>
 
-      <!-- AppSheet iframe - v-showで状態保持 -->
-      <div class="fullscreen-appsheet" v-show="currentView === 'appsheet'">
-        <iframe
-          :src="appsheetLoaded ? 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b' : 'about:blank'"
-          scrolling="no"
-          id="appsheetFrame"
-          :style="{
+    <!-- AppSheet iframe - v-showで状態保持 -->
+    <div class="fullscreen-appsheet" v-show="currentView === 'appsheet'">
+      <iframe
+        :src="appsheetLoaded ? 'https://www.appsheet.com/start/b3cc011c-f2d9-4021-b16f-2efdd921a42b' : 'about:blank'"
+        scrolling="no" id="appsheetFrame" :style="{
             width: '100%',
             height: '100%',
             border: 'none',
             pointerEvents: 'auto'
-          }"
-          allowfullscreen
-          allow="clipboard-read; clipboard-write;"
-          @load="handleIframeLoad">
-        </iframe>
-      </div>
-      
-      <!-- ChatKit iframe - v-showで状態保持 -->
-      <div class="fullscreen-appsheet" v-show="currentView === 'chatkit'">
-        <iframe
-          :src="chatkitLoaded ? 'https://lxo7uvj8r0.execute-api.ap-northeast-1.amazonaws.com/' : 'about:blank'"
-          scrolling="no"
-          :style="{
+          }" allowfullscreen allow="clipboard-read; clipboard-write;" @load="handleIframeLoad">
+      </iframe>
+    </div>
+
+    <!-- ChatKit iframe - v-showで状態保持 -->
+    <div class="fullscreen-appsheet" v-show="currentView === 'chatkit'">
+      <iframe :src="chatkitLoaded ? 'https://lxo7uvj8r0.execute-api.ap-northeast-1.amazonaws.com/' : 'about:blank'"
+        scrolling="no" :style="{
             width: '100%',
             height: '100%',
             border: 'none',
             pointerEvents: 'auto'
-          }"
-          allow="microphone; clipboard-read; clipboard-write"
-          allowfullscreen>
-        </iframe>
-      </div>
-      
-
-      
+          }" allow="microphone; clipboard-read; clipboard-write" allowfullscreen>
+      </iframe>
     </div>
 
-    <script>
-      // Google Client ID - 実際のGoogle Cloud Consoleから取得したIDに置き換える必要があります
-      const GOOGLE_CLIENT_ID = '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com';
-      
-      // エラーメッセージを表示
-      function showError(message) {
-        const errorElement = document.getElementById('errorMessage');
-        errorElement.textContent = message;
-        errorElement.style.display = 'block';
-        hideLoading();
-      }
-      
-      // ローディング表示の切り替え
-      function showLoading() {
-        document.getElementById('login-view').classList.add('hidden');
-        document.getElementById('loading-view').classList.remove('hidden');
-      }
-      
-      function hideLoading() {
-        document.getElementById('login-view').classList.remove('hidden');
-        document.getElementById('loading-view').classList.add('hidden');
-      }
-      
-      // メインアプリの表示
-      function showApp(userEmail) {
-        console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
-        
-        // 認証ページを非表示
-        document.getElementById('auth-page').style.display = 'none';
-        
-        // メインアプリを表示
-        document.getElementById('app').style.display = 'block';
-        
-        // Vue.jsアプリにメールアドレスを渡す
-        if (window.app) {
-          window.app.userEmail = userEmail;
-        }
-      }
-      
-      // Google認証成功時に呼び出される関数
-      function handleCredentialResponse(response) {
-        console.log('Google認証レスポンス:', response);
-        
-        // JWTトークンをデコードして内容を確認する
-        const token = response.credential;
-        const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        
-        const payload = JSON.parse(jsonPayload);
-        console.log('デコードされたペイロード:', payload);
-        
-        // ユーザーのメールアドレスを取得
-        const email = payload.email;
 
-        // 許可するメールアドレスリスト
-        const allowedEmails = [
-          "sugimori@skyarch.net",
-          "k.sugimori.p@gmail.com",
-          "k.sugimori.cz@gmail.com"
-        ];
-        if (!allowedEmails.includes(email)) {
-          showError("このメールアドレスではログインできません。");
+
+  </div>
+
+  <script>
+    // Google Client ID - 実際のGoogle Cloud Consoleから取得したIDに置き換える必要があります
+    const GOOGLE_CLIENT_ID = '50428583319-gicuh9uve4gcj36a5huuhm5m0jcb3fr4.apps.googleusercontent.com';
+
+    // エラーメッセージを表示
+    function showError(message) {
+      const errorElement = document.getElementById('errorMessage');
+      errorElement.textContent = message;
+      errorElement.style.display = 'block';
+      hideLoading();
+    }
+
+    // ローディング表示の切り替え
+    function showLoading() {
+      document.getElementById('login-view').classList.add('hidden');
+      document.getElementById('loading-view').classList.remove('hidden');
+    }
+
+    function hideLoading() {
+      document.getElementById('login-view').classList.remove('hidden');
+      document.getElementById('loading-view').classList.add('hidden');
+    }
+
+    // メインアプリの表示
+    function showApp(userEmail) {
+      console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
+
+      // 認証ページを非表示
+      document.getElementById('auth-page').style.display = 'none';
+
+      // メインアプリを表示
+      document.getElementById('app').style.display = 'block';
+
+      // Vue.jsアプリにメールアドレスを渡す
+      if (window.app) {
+        window.app.userEmail = userEmail;
+      }
+    }
+
+    // Google認証成功時に呼び出される関数
+    function handleCredentialResponse(response) {
+      console.log('Google認証レスポンス:', response);
+
+      // JWTトークンをデコードして内容を確認する
+      const token = response.credential;
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+
+      const payload = JSON.parse(jsonPayload);
+      console.log('デコードされたペイロード:', payload);
+
+      // ユーザーのメールアドレスを取得
+      const email = payload.email;
+
+      // 許可するメールアドレスリスト
+      const allowedEmails = [
+        "sugimori@skyarch.net",
+        "k.sugimori.p@gmail.com",
+        "k.sugimori.cz@gmail.com"
+      ];
+      if (!allowedEmails.includes(email)) {
+        showError("このメールアドレスではログインできません。");
+        return;
+      }
+
+      // ローディング表示
+      showLoading();
+
+      // 認証情報を保存
+      localStorage.setItem('ariel_email', email);
+      localStorage.setItem('ariel_auth_token', token);
+
+      // メイン画面表示
+      setTimeout(() => {
+        showApp(email);
+      }, 500);
+    }
+
+    // Google Sign-In初期化関数
+    function initializeGoogleSignIn() {
+      console.log('Google Sign-In初期化開始');
+
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse
+      });
+
+      google.accounts.id.renderButton(
+        document.getElementById("googleSignInButton"),
+        { theme: "outline", size: "large" }
+      );
+
+      console.log('Google Sign-In初期化完了');
+    }
+
+    function loadGoogleSignInScript() {
+      return new Promise((resolve, reject) => {
+        if (window.google && window.google.accounts) {
+          resolve();
           return;
         }
-        
-        // ローディング表示
-        showLoading();
-        
-        // 認証情報を保存
-        localStorage.setItem('ariel_email', email);
-        localStorage.setItem('ariel_auth_token', token);
-        
-        // メイン画面表示
-        setTimeout(() => {
-          showApp(email);
-        }, 500);
-      }
-      
-      // Google Sign-In初期化関数
-      function initializeGoogleSignIn() {
-        console.log('Google Sign-In初期化開始');
-        
-        google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleCredentialResponse
-        });
-        
-        google.accounts.id.renderButton(
-          document.getElementById("googleSignInButton"),
-          { theme: "outline", size: "large" }
-        );
-        
-        console.log('Google Sign-In初期化完了');
-      }
 
-      function loadGoogleSignInScript() {
-        return new Promise((resolve, reject) => {
-          if (window.google && window.google.accounts) {
-            resolve();
-            return;
-          }
-
-          const existingScript = document.querySelector('script[data-google-gsi="true"]');
-          if (existingScript) {
-            existingScript.addEventListener('load', () => resolve(), { once: true });
-            existingScript.addEventListener('error', () => reject(new Error('Google Sign-In SDKの読み込みに失敗しました。')), { once: true });
-            return;
-          }
-
-          const script = document.createElement('script');
-          script.src = 'https://accounts.google.com/gsi/client';
-          script.async = true;
-          script.defer = true;
-          script.dataset.googleGsi = 'true';
-          script.onload = () => resolve();
-          script.onerror = () => reject(new Error('Google Sign-In SDKの読み込みに失敗しました。'));
-          document.head.appendChild(script);
-        });
-      }
-      
-      // ページ読み込み時に実行
-      window.onload = function() {
-        console.log('ページ読み込み完了');
-        
-        // ローカルストレージのチェック
-        const email = localStorage.getItem('ariel_email');
-        const token = localStorage.getItem('ariel_auth_token');
-        
-        // 認証済みかチェック
-        if (email && token) {
-          console.log('認証情報を検出: ', email);
-          showApp(email);
-        } else {
-          loadGoogleSignInScript()
-            .then(() => {
-              initializeGoogleSignIn();
-            })
-            .catch((error) => {
-              console.error(error);
-              showError('Google Sign-Inの初期化に失敗しました。時間をおいて再読み込みしてください。');
-            });
+        const existingScript = document.querySelector('script[data-google-gsi="true"]');
+        if (existingScript) {
+          existingScript.addEventListener('load', () => resolve(), { once: true });
+          existingScript.addEventListener('error', () => reject(new Error('Google Sign-In SDKの読み込みに失敗しました。')), { once: true });
+          return;
         }
-      };
-      
 
-      
-      // Vue インスタンス作成 - シンプル化して必要な機能だけ残す
-      window.app = new Vue({
-        el:"#app",
-        data:{
-          knowledges:[
-            
-            {id:"0001",name:"Googleニュース",url:"https://news.google.com/"},
-            {id:"0002",name:"経済レポート",url:"http://www3.keizaireport.com/"},
-            {id:"0003",name:"朝日新聞",url:"https://www.asahi.com/?iref=pc_gnavi"},
-            {id:"0004",name:"NHKニュース",url:"https://www3.nhk.or.jp/news/"},
-            {id:"0005",name:"ハフポス",url:"https://www.huffingtonpost.jp/"},
-            {id:"0006",name:"東洋経済",url:"https://toyokeizai.net/"},
-            {id:"0007",name:"CNN",url:"https://www.cnn.co.jp/"},
-            {id:"0008",name:"GIGAZINE",url:"https://gigazine.net/"},   
-          ],
-          learnings:[
-            {id:"1000",name:"AWS Study Navigator",url:"https://kenta-matsuda.github.io/Kenta-Matsuda.github.io-aws-study/"},
-            {id:"1001",name:"Schoo",url:"https://schoo.jp/"},
-            {id:"1002",name:"JMOOC",url:"https://www.jmooc.jp/"},
-            {id:"1003",name:"Progate",url:"https://prog-8.com/dashboard"},
-            {id:"1004",name:"Udemy",url:"https://www.udemy.com/"},
-          ],
-          drives:[
-            {id:"2001",name:"Frames",url:"https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb"},
-            {id:"2002",name:"MyDrive",url:"https://drive.google.com/drive/u/0/my-drive"},
-            {id:"2003",name:"swordFishⅢ",url:"https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8"},
-            {id:"2004",name:"DropBox",url:"https://www.dropbox.com/home"},
-          ],
-          gsuites:[
-            {id:"3001",name:"Gmail",url:"https://mail.google.com/mail/u/1/#inbox"},
-            {id:"3002",name:"GooglePhoto",url:"https://photos.google.com/u/1/?referrer=GPU&pageId=none"},
-            {id:"3003",name:"Google Calendar",url:"https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ"},
-            {id:"3004",name:"Google Looker Studio",url:"https://lookerstudio.google.com/"},
-            {id:"3005",name:"Google Keep",url:"https://keep.google.com/u/0/#home"},
-          ],
-          tools:[
-            {id:"4001",name:"Chat-GPT",url:"https://chatgpt.com/"},
-            {id:"4002",name:"Discord(LUNA)",url:"https://discord.com/channels/@me/1471896811081040106"},
-            {id:"4003",name:"NotebookLM",url:"https://notebooklm.google.com/"},
-            {id:"4004",name:"Notion",url:"https://www.notion.so/389ea6a3e06f47f790cc4f8e2b724589"},
-            {id:"4005",name:"Trello",url:"https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89"},
-            {id:"4006",name:"Inoreader",url:"https://www.inoreader.com/all_articles"},
-            {id:"4007",name:"Nylas",url:"http://nylas.com/"},
-            {id:"4008",name:"Tavily",url:"https://app.tavily.com/home"},
-            {id:"4009",name:"NetPrint",url:"https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx"},
-          ],
-          its:[
-            {id:"5001",name:"Github",url:"https://github.com/"},
-            {id:"5002",name:"Vercel",url:"https://vercel.com/kunihirosugimoris-projects"},
-            {id:"5003",name:"fly.io",url:"https://fly.io/dashboard/k-sugimori-cz-gmail-com"},
-            {id:"5004",name:"Cloudflare",url:"https://dash.cloudflare.com/f98d3faca1a9cab9096e9be70b0850b8/home/domains"},
-            {id:"5005",name:"Dify",url:"https://cloud.dify.ai/apps"},
-            {id:"5006",name:"AppSheet",url:"https://www.appsheet.com/Template/Apps "},
-            {id:"5007",name:"OpenAI Platform",url:"https://platform.openai.com/"},
-            {id:"5008",name:"Codex",url:"https://chatgpt.com/codex"},
-            {id:"5009",name:"Claude Platform",url:"https://platform.claude.com/usage"},
-            {id:"5010",name:"Google AI Studio",url:"https://aistudio.google.com/u/2/billing"},
-            
-          ],
-          tvs:[
-            {id:"6001",name:"Abemaニュース",url:"https://abema.tv/now-on-air/abema-news"},
-            {id:"6002",name:"Netflix",url:"https://www.netflix.com/browse/my-list"},
-            {id:"6003",name:"AmazonPrime",url:"https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff"},
-            {id:"6004",name:"U-Next",url:"https://video.unext.jp/"},
-            {id:"6005",name:"Disney+",url:"https://www.disneyplus.com/ja-jp/home"},
-            {id:"6006",name:"NHKオンデマンド",url:"https://www.nhk-ondemand.jp/#/0/"},
-            {id:"6007",name:"Youtubeライブラリ",url:"https://www.youtube.com/feed/library"},
-            {id:"6008",name:"Youtubeミュージック",url:"https://music.youtube.com/"},
-            {id:"6009",name:"ニコニコ動画",url:"https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop"},
-            {id:"6010",name:"Pixiv",url:"https://www.pixiv.net/"},
-          ],
-          prvs:[
-            {id:"7001",name:"Twitter",url:"https://x.com/nanaemiv"},
-            {id:"7002",name:"七尾えみ Channel",url:"https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg"},
-            {id:"7003",name:"Mirrativ配信画面",url:"https://www.mirrativ.com/"},
-            {id:"7004",name:"はてなブックマーク",url:"https://b.hatena.ne.jp/hantenasgmr/bookmark"},
-            {id:"7005",name:"Facebook",url:"https://www.facebook.com/"},
-            {id:"7006",name:"楽天銀行",url:"https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN"},
-            {id:"7007",name:"七尾えみFRX",url:"https://hub.vroid.com/characters/679022379978810834/models/522769586827415511"},
-          ],
-          showContents:["99999"],
-          showNav: false,
-          tooltipMessage: '',
-          showTooltip: false,
-          userEmail: '',
-          currentView: 'chatkit',
-          appsheetLoaded: false,
-          chatkitLoaded: true
-        },
-        mounted() {
-          const email = localStorage.getItem('ariel_email');
-          this.userEmail = email || 'ゲスト';
-          this.showContents = ["99999"];
-          this.currentView = 'chatkit';
-          this.chatkitLoaded = true;
-        },
-        beforeDestroy() {
-        },
-        methods:{
-          toggle: function(data) {
-            this.showContents = [data];
-          },
-          toggleView: function() {
-            this.currentView = this.currentView === 'appsheet' ? 'chatkit' : 'appsheet';
-            if (this.currentView === 'appsheet') {
-              this.appsheetLoaded = true;
-            } else {
-              this.chatkitLoaded = true;
-            }
-            this.showTooltip = true;
-            this.tooltipMessage = this.currentView === 'chatkit' ? 'ChatKitに切り替えました' : 'AppSheetに切り替えました';
-            setTimeout(() => {
-              this.showTooltip = false;
-            }, 2000);
-          },
-          handleIframeLoad() {
-            console.log('iframeがロードされました');
-
-            // AppSheetを画面に収めるため、1回だけスクロール調整
-            setTimeout(() => {
-              window.scrollTo(0, 0);
-            }, 300);
-            
-            // 通知表示
-            this.showTooltip = true;
-            this.tooltipMessage = 'AppSheetが読み込まれました';
-            setTimeout(() => {
-              this.showTooltip = false;
-            }, 3000);
-          },
-          logout() {
-            // Google認証をサインアウト
-            if (window.google && window.google.accounts && window.google.accounts.id) {
-              window.google.accounts.id.disableAutoSelect();
-            }
-            
-            // ローカルストレージから認証情報を削除
-            localStorage.removeItem('ariel_auth_token');
-            localStorage.removeItem('ariel_email');
-            
-            // ページをリロード
-            window.location.reload();
-          }
-        }
+        const script = document.createElement('script');
+        script.src = 'https://accounts.google.com/gsi/client';
+        script.async = true;
+        script.defer = true;
+        script.dataset.googleGsi = 'true';
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Google Sign-In SDKの読み込みに失敗しました。'));
+        document.head.appendChild(script);
       });
-    </script>
-  </body>
+    }
+
+    // ページ読み込み時に実行
+    window.onload = function () {
+      console.log('ページ読み込み完了');
+
+      // ローカルストレージのチェック
+      const email = localStorage.getItem('ariel_email');
+      const token = localStorage.getItem('ariel_auth_token');
+
+      // 認証済みかチェック
+      if (email && token) {
+        console.log('認証情報を検出: ', email);
+        showApp(email);
+      } else {
+        loadGoogleSignInScript()
+          .then(() => {
+            initializeGoogleSignIn();
+          })
+          .catch((error) => {
+            console.error(error);
+            showError('Google Sign-Inの初期化に失敗しました。時間をおいて再読み込みしてください。');
+          });
+      }
+    };
+
+
+
+    // Vue インスタンス作成 - シンプル化して必要な機能だけ残す
+    window.app = new Vue({
+      el: "#app",
+      data: {
+        knowledges: [
+
+          { id: "0001", name: "Googleニュース", url: "https://news.google.com/" },
+          { id: "0002", name: "経済レポート", url: "http://www3.keizaireport.com/" },
+          { id: "0003", name: "朝日新聞", url: "https://www.asahi.com/?iref=pc_gnavi" },
+          { id: "0004", name: "NHKニュース", url: "https://www3.nhk.or.jp/news/" },
+          { id: "0005", name: "ハフポス", url: "https://www.huffingtonpost.jp/" },
+          { id: "0006", name: "東洋経済", url: "https://toyokeizai.net/" },
+          { id: "0007", name: "CNN", url: "https://www.cnn.co.jp/" },
+          { id: "0008", name: "GIGAZINE", url: "https://gigazine.net/" },
+        ],
+        learnings: [
+          { id: "1000", name: "AWS Study Navigator", url: "https://kenta-matsuda.github.io/Kenta-Matsuda.github.io-aws-study/" },
+          { id: "1001", name: "Schoo", url: "https://schoo.jp/" },
+          { id: "1002", name: "JMOOC", url: "https://www.jmooc.jp/" },
+          { id: "1003", name: "Progate", url: "https://prog-8.com/dashboard" },
+          { id: "1004", name: "Udemy", url: "https://www.udemy.com/" },
+        ],
+        drives: [
+          { id: "2001", name: "Frames", url: "https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb" },
+          { id: "2002", name: "MyDrive", url: "https://drive.google.com/drive/u/0/my-drive" },
+          { id: "2003", name: "swordFishⅢ", url: "https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8" },
+          { id: "2004", name: "DropBox", url: "https://www.dropbox.com/home" },
+        ],
+        gsuites: [
+          { id: "3001", name: "Gmail", url: "https://mail.google.com/mail/u/1/#inbox" },
+          { id: "3002", name: "GooglePhoto", url: "https://photos.google.com/u/1/?referrer=GPU&pageId=none" },
+          { id: "3003", name: "Google Calendar", url: "https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ" },
+          { id: "3004", name: "Google Looker Studio", url: "https://lookerstudio.google.com/" },
+          { id: "3005", name: "Google Keep", url: "https://keep.google.com/u/0/#home" },
+        ],
+        tools: [
+          { id: "4001", name: "Chat-GPT", url: "https://chatgpt.com/" },
+          { id: "4002", name: "Discord(LUNA)", url: "https://discord.com/channels/@me/1471896811081040106" },
+          { id: "4003", name: "NotebookLM", url: "https://notebooklm.google.com/" },
+          { id: "4004", name: "Notion", url: "https://www.notion.so/389ea6a3e06f47f790cc4f8e2b724589" },
+          { id: "4005", name: "Trello", url: "https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89" },
+          { id: "4006", name: "Inoreader", url: "https://www.inoreader.com/all_articles" },
+          { id: "4007", name: "Nylas", url: "http://nylas.com/" },
+          { id: "4008", name: "Tavily", url: "https://app.tavily.com/home" },
+          { id: "4009", name: "NetPrint", url: "https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx" },
+        ],
+        its: [
+          { id: "5001", name: "Github", url: "https://github.com/" },
+          { id: "5002", name: "Vercel", url: "https://vercel.com/kunihirosugimoris-projects" },
+          { id: "5003", name: "fly.io", url: "https://fly.io/dashboard/k-sugimori-cz-gmail-com" },
+          { id: "5004", name: "Cloudflare", url: "https://dash.cloudflare.com/f98d3faca1a9cab9096e9be70b0850b8/home/domains" },
+          { id: "5005", name: "Dify", url: "https://cloud.dify.ai/apps" },
+          { id: "5006", name: "AppSheet", url: "https://www.appsheet.com/Template/Apps " },
+          { id: "5007", name: "OpenAI Platform", url: "https://platform.openai.com/" },
+          { id: "5008", name: "Codex", url: "https://chatgpt.com/codex" },
+          { id: "5009", name: "Claude Platform", url: "https://platform.claude.com/usage" },
+          { id: "5010", name: "Google AI Studio", url: "https://aistudio.google.com/u/2/billing" },
+
+        ],
+        tvs: [
+          { id: "6001", name: "Abemaニュース", url: "https://abema.tv/now-on-air/abema-news" },
+          { id: "6002", name: "Netflix", url: "https://www.netflix.com/browse/my-list" },
+          { id: "6003", name: "AmazonPrime", url: "https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff" },
+          { id: "6004", name: "U-Next", url: "https://video.unext.jp/" },
+          { id: "6005", name: "Disney+", url: "https://www.disneyplus.com/ja-jp/home" },
+          { id: "6006", name: "NHKオンデマンド", url: "https://www.nhk-ondemand.jp/#/0/" },
+          { id: "6007", name: "Youtubeライブラリ", url: "https://www.youtube.com/feed/library" },
+          { id: "6008", name: "Youtubeミュージック", url: "https://music.youtube.com/" },
+          { id: "6009", name: "ニコニコ動画", url: "https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop" },
+          { id: "6010", name: "Pixiv", url: "https://www.pixiv.net/" },
+        ],
+        prvs: [
+          { id: "7001", name: "Twitter", url: "https://x.com/nanaemiv" },
+          { id: "7002", name: "七尾えみ Channel", url: "https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg" },
+          { id: "7003", name: "Mirrativ配信画面", url: "https://www.mirrativ.com/" },
+          { id: "7004", name: "はてなブックマーク", url: "https://b.hatena.ne.jp/hantenasgmr/bookmark" },
+          { id: "7005", name: "Facebook", url: "https://www.facebook.com/" },
+          { id: "7006", name: "楽天銀行", url: "https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN" },
+          { id: "7007", name: "七尾えみFRX", url: "https://hub.vroid.com/characters/679022379978810834/models/522769586827415511" },
+        ],
+        showContents: ["99999"],
+        showNav: false,
+        tooltipMessage: '',
+        showTooltip: false,
+        userEmail: '',
+        currentView: 'chatkit',
+        appsheetLoaded: false,
+        chatkitLoaded: true
+      },
+      mounted() {
+        const email = localStorage.getItem('ariel_email');
+        this.userEmail = email || 'ゲスト';
+        this.showContents = ["99999"];
+        this.currentView = 'chatkit';
+        this.chatkitLoaded = true;
+      },
+      beforeDestroy() {
+      },
+      methods: {
+        toggle: function (data) {
+          this.showContents = [data];
+        },
+        toggleView: function () {
+          this.currentView = this.currentView === 'appsheet' ? 'chatkit' : 'appsheet';
+          if (this.currentView === 'appsheet') {
+            this.appsheetLoaded = true;
+          } else {
+            this.chatkitLoaded = true;
+          }
+          this.showTooltip = true;
+          this.tooltipMessage = this.currentView === 'chatkit' ? 'ChatKitに切り替えました' : 'AppSheetに切り替えました';
+          setTimeout(() => {
+            this.showTooltip = false;
+          }, 2000);
+        },
+        handleIframeLoad() {
+          console.log('iframeがロードされました');
+
+          // AppSheetを画面に収めるため、1回だけスクロール調整
+          setTimeout(() => {
+            window.scrollTo(0, 0);
+          }, 300);
+
+          // 通知表示
+          this.showTooltip = true;
+          this.tooltipMessage = 'AppSheetが読み込まれました';
+          setTimeout(() => {
+            this.showTooltip = false;
+          }, 3000);
+        },
+        logout() {
+          // Google認証をサインアウト
+          if (window.google && window.google.accounts && window.google.accounts.id) {
+            window.google.accounts.id.disableAutoSelect();
+          }
+
+          // ローカルストレージから認証情報を削除
+          localStorage.removeItem('ariel_auth_token');
+          localStorage.removeItem('ariel_email');
+
+          // ページをリロード
+          window.location.reload();
+        }
+      }
+    });
+  </script>
+</body>
+
 </html>
