@@ -140,13 +140,15 @@
 
     .ssa-ascii {
       font-family: 'SF Mono', 'JetBrains Mono', 'Fira Code', Consolas, monospace;
-      font-size: 11px;
+      font-size: clamp(7px, 2.4vw, 11px);
       line-height: 1.4;
       color: #4A9EFF;
       white-space: pre;
+      display: inline-block;
+      text-align: left;
       margin-bottom: 24px;
       text-shadow: 0 0 20px rgba(74, 158, 255, 0.3);
-      letter-spacing: 0.5px;
+      letter-spacing: 0;
     }
 
     .ssa-subtitle {
@@ -362,19 +364,19 @@
   <div id="auth-page">
     <div class="auth-container">
       <h1 class="title">Sylpheed ポータル</h1>
-      <div class="ssa-ascii">
-        ╔══════════════════════════════════════╗
-        ║ Super SYLPHEED Architecture ║
-        ╠══════════════════════════════════════╣
-        ║ S Symphonic ║
-        ║ Y Your-access ║
-        ║ L Layered ║
-        ║ P Personal ║
-        ║ H Hub for ║
-        ║ E Every ║
-        ║ E Entry &amp; ║
-        ║ D Device ║
-        ╚══════════════════════════════════════╝</div>
+      <div class="ssa-ascii"
+>╔══════════════════════════════════════╗
+║     Super SYLPHEED Architecture      ║
+╠══════════════════════════════════════╣
+║  S   Symphonic                       ║
+║  Y   Your-access                     ║
+║  L   Layered                         ║
+║  P   Personal                        ║
+║  H   Hub for                         ║
+║  E   Every                           ║
+║  E   Entry &amp;                         ║
+║  D   Device                          ║
+╚══════════════════════════════════════╝</div>
       <div class="ssa-subtitle">Personal · Multi-LLM · Multi-device · Orchestrated</div>
 
       <div id="login-view">
