@@ -243,6 +243,24 @@
         max-height: none !important;
       }
 
+      /* 縦型でもバーをスリムに保つ — toggler が Bootstrap 既定のままだとデカくて
+         バー全体が太る (2026-07-14 ひろくん指摘)。576px 以下だけでなく 991px 以下全体で締める */
+      .navbar-toggler {
+        padding: 0.1rem 0.4rem !important;
+        font-size: 0.9rem !important;
+        line-height: 1 !important;
+        border-width: 1px !important;
+      }
+
+      .navbar-toggler-icon {
+        width: 1.1em !important;
+        height: 1.1em !important;
+      }
+
+      #nav-hover-bar .navbar-brand {
+        font-size: 1rem !important;
+      }
+
       .fullscreen-appsheet {
         padding-top: 30px;
       }
@@ -680,85 +698,18 @@
 
 
     // Vue インスタンス作成 - シンプル化して必要な機能だけ残す
+    // 2026-07-14: 8カテゴリのリンクは nav-links.json に切り出し (SSA-iOS 版とリンク共有・SSOT)
     window.app = new Vue({
       el: "#app",
       data: {
-        knowledges: [
-
-          { id: "0001", name: "Googleニュース", url: "https://news.google.com/" },
-          { id: "0002", name: "経済レポート", url: "http://www3.keizaireport.com/" },
-          { id: "0003", name: "朝日新聞", url: "https://www.asahi.com/?iref=pc_gnavi" },
-          { id: "0004", name: "NHKニュース", url: "https://www3.nhk.or.jp/news/" },
-          { id: "0005", name: "ハフポス", url: "https://www.huffingtonpost.jp/" },
-          { id: "0006", name: "東洋経済", url: "https://toyokeizai.net/" },
-          { id: "0007", name: "CNN", url: "https://www.cnn.co.jp/" },
-          { id: "0008", name: "GIGAZINE", url: "https://gigazine.net/" },
-        ],
-        learnings: [
-          { id: "1000", name: "AWS Study Navigator", url: "https://kenta-matsuda.github.io/Kenta-Matsuda.github.io-aws-study/" },
-          { id: "1001", name: "Schoo", url: "https://schoo.jp/" },
-          { id: "1002", name: "JMOOC", url: "https://www.jmooc.jp/" },
-          { id: "1003", name: "Progate", url: "https://prog-8.com/dashboard" },
-          { id: "1004", name: "Udemy", url: "https://www.udemy.com/" },
-        ],
-        drives: [
-          { id: "2001", name: "Frames", url: "https://drive.google.com/drive/u/0/folders/1T8Fr9Q_svATBleRkEWiVN9GmO6s3zcsb" },
-          { id: "2002", name: "MyDrive", url: "https://drive.google.com/drive/u/0/my-drive" },
-          { id: "2003", name: "swordFishⅢ", url: "https://drive.google.com/drive/u/0/folders/1JdY8rZA2e1sUW9wQ3oyHj6Jbx60aMxL8" },
-          { id: "2004", name: "DropBox", url: "https://www.dropbox.com/home" },
-        ],
-        gsuites: [
-          { id: "3001", name: "Gmail", url: "https://mail.google.com/mail/u/1/#inbox" },
-          { id: "3002", name: "GooglePhoto", url: "https://photos.google.com/u/1/?referrer=GPU&pageId=none" },
-          { id: "3003", name: "Google Calendar", url: "https://calendar.google.com/calendar/r?cid=ajJkcTlrNzJpY3VrbGMzaTI1aDhnYzFyMW9AZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ" },
-          { id: "3004", name: "Google Looker Studio", url: "https://lookerstudio.google.com/" },
-          { id: "3005", name: "Google Keep", url: "https://keep.google.com/u/0/#home" },
-        ],
-        tools: [
-          { id: "4001", name: "Chat-GPT", url: "https://chatgpt.com/" },
-          { id: "4002", name: "AWS-SSA", url: "https://github.com/SugimoriKunihiro/AWS-SSA" },
-          { id: "4003", name: "Discord(LUNA)", url: "https://discord.com/channels/@me/1471896811081040106" },
-          { id: "4004", name: "NotebookLM", url: "https://notebooklm.google.com/" },
-          { id: "4005", name: "Notion", url: "https://www.notion.so/389ea6a3e06f47f790cc4f8e2b724589" },
-          { id: "4006", name: "Trello", url: "https://trello.com/b/9J0Xza0u/%E6%9D%89%E6%A3%AE%E3%81%AE%E3%83%9C%E3%83%BC%E3%83%89" },
-          { id: "4007", name: "Inoreader", url: "https://www.inoreader.com/all_articles" },
-          { id: "4008", name: "NetPrint", url: "https://networkprint.ne.jp/sharp_netprint/ja/mypage.aspx" },
-        ],
-        its: [
-          { id: "5001", name: "Github", url: "https://github.com/" },
-          { id: "5002", name: "Nylas", url: "http://nylas.com/" },
-          { id: "5003", name: "Tavily", url: "https://app.tavily.com/home" },
-          { id: "5004", name: "Dify", url: "https://cloud.dify.ai/apps" },
-          { id: "5005", name: "AppSheet", url: "https://www.appsheet.com/Template/Apps " },
-          { id: "5006", name: "OpenAI Platform", url: "https://platform.openai.com/" },
-          { id: "5007", name: "Codex", url: "https://chatgpt.com/codex" },
-          { id: "5008", name: "Claude Platform", url: "https://platform.claude.com/usage" },
-          { id: "5009", name: "Google AI Studio", url: "https://aistudio.google.com/u/2/billing" },
-          { id: "5010", name: "xAI Dashboard", url: "https://console.x.ai/team/170f18dc-cabe-4cf6-920c-f291cd74793c" },
-          { id: "5011", name: "OpenRouter", url: "https://openrouter.ai/activity" },
-
-        ],
-        tvs: [
-          { id: "6001", name: "Abemaニュース", url: "https://abema.tv/now-on-air/abema-news" },
-          { id: "6002", name: "Netflix", url: "https://www.netflix.com/browse/my-list" },
-          { id: "6003", name: "AmazonPrime", url: "https://www.amazon.co.jp/gp/video/mystuff/ref=atv_nb_mystuff" },
-          { id: "6004", name: "U-Next", url: "https://video.unext.jp/" },
-          { id: "6005", name: "Disney+", url: "https://www.disneyplus.com/ja-jp/home" },
-          { id: "6006", name: "NHKオンデマンド", url: "https://www.nhk-ondemand.jp/#/0/" },
-          { id: "6007", name: "Youtubeライブラリ", url: "https://www.youtube.com/feed/library" },
-          { id: "6008", name: "Youtubeミュージック", url: "https://music.youtube.com/" },
-          { id: "6009", name: "ニコニコ動画", url: "https://www.nicovideo.jp/my/mylist?cmnhd_ref=device%3Dpc%26site%3Dniconico%26pos%3Duserpanel%26page%3Dtop" },
-          { id: "6010", name: "Pixiv", url: "https://www.pixiv.net/" },
-        ],
-        prvs: [
-          { id: "7001", name: "Twitter", url: "https://x.com/nanaemiv" },
-          { id: "7002", name: "七尾えみ Channel", url: "https://www.youtube.com/channel/UCNpaS7EteiT1IFigRBfW6eg" },
-          { id: "7003", name: "Mirrativ配信画面", url: "https://www.mirrativ.com/" },
-          { id: "7004", name: "はてなブックマーク", url: "https://b.hatena.ne.jp/hantenasgmr/bookmark" },
-          { id: "7005", name: "Facebook", url: "https://www.facebook.com/" },
-          { id: "7006", name: "楽天銀行", url: "https://fes.rakuten-bank.co.jp/MS/main/RbS?CurrentPageID=START&&COMMAND=LOGIN" },
-          { id: "7007", name: "七尾えみFRX", url: "https://hub.vroid.com/characters/679022379978810834/models/522769586827415511" },
-        ],
+        knowledges: [],
+        learnings: [],
+        drives: [],
+        gsuites: [],
+        tools: [],
+        its: [],
+        tvs: [],
+        prvs: [],
         showContents: ["99999"],
         showNav: false,
         tooltipMessage: '',
@@ -773,6 +724,20 @@
         this.showContents = ["99999"];
         this.currentView = 'chatkit';
         this.chatkitLoaded = true;
+        // nav-links.json をロード (Portal / iOS-Front で共有される SSOT)
+        fetch('./nav-links.json', { cache: 'no-cache' })
+          .then(r => r.json())
+          .then(links => {
+            this.knowledges = links.knowledges || [];
+            this.learnings = links.learnings || [];
+            this.drives = links.drives || [];
+            this.gsuites = links.gsuites || [];
+            this.tools = links.tools || [];
+            this.its = links.its || [];
+            this.tvs = links.tvs || [];
+            this.prvs = links.prvs || [];
+          })
+          .catch(err => console.error('nav-links.json load failed:', err));
       },
       beforeDestroy() {
       },
