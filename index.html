@@ -572,6 +572,32 @@
     }
 
     // メインアプリの表示
+    // === D-52 (2026-08-16): WebUI (iframe) に**このログインのトークンを渡す** ===
+    // WebUI は別 origin (API GW) なので localStorage を共有できない。
+    // 🔴 origin を必ず確認する — どこからでも受けたら偽トークンを注入されてしまう。
+    const SSA_WEBUI_ORIGIN = 'https://lxo7uvj8r0.execute-api.ap-northeast-1.amazonaws.com';
+    window.addEventListener('message', function (ev) {
+      if (ev.origin !== SSA_WEBUI_ORIGIN) return;
+      if (!ev.data || ev.data.type !== 'ssa-auth-request') return;
+      try {
+        ev.source.postMessage({
+          type: 'ssa-auth',
+          token: localStorage.getItem('ariel_auth_token') || '',
+          email: localStorage.getItem('ariel_email') || '',
+        }, ev.origin);
+      } catch (e) { console.warn('[ssa-auth] 渡せなかった', e); }
+    });
+
+    function ssaNotifyLogout() {
+      try {
+        document.querySelectorAll('iframe').forEach(function (f) {
+          if (f.contentWindow) {
+            f.contentWindow.postMessage({ type: 'ssa-auth-logout' }, SSA_WEBUI_ORIGIN);
+          }
+        });
+      } catch (e) { /* 無視 */ }
+    }
+
     function showApp(userEmail) {
       console.log('showApp関数が呼び出されました。メールアドレス:', userEmail);
 
@@ -753,6 +779,9 @@
           if (window.google && window.google.accounts && window.google.accounts.id) {
             window.google.accounts.id.disableAutoSelect();
           }
+
+          // D-52: WebUI (iframe) にもログアウトを伝える (トークンを捨てさせる)
+          ssaNotifyLogout();
 
           // ローカルストレージから認証情報を削除
           localStorage.removeItem('ariel_auth_token');
