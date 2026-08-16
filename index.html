@@ -576,17 +576,73 @@
     // WebUI は別 origin (API GW) なので localStorage を共有できない。
     // 🔴 origin を必ず確認する — どこからでも受けたら偽トークンを注入されてしまう。
     const SSA_WEBUI_ORIGIN = 'https://lxo7uvj8r0.execute-api.ap-northeast-1.amazonaws.com';
+    // 🔴 **Google の ID トークンは 1 時間で切れる** (2026-08-16 に絵梨さんが踏んだ)。
+    // 症状: Portal は「ログイン済み」の画面を出すのに、WebUI の API が全部
+    //   `{"detail":"トークンの検証に失敗","Gate":"jwt"}` で 401 になる。
+    // 真因: `window.onload` が localStorage にトークンがあるだけで `showApp()` して、
+    //   **期限を見ていなかった**。∴ 期限切れを「未ログイン」として扱う。
+    // ⚠️ 期限切れのときトークンを外して素で投げるのは**絶対にやらない** —
+    //   サーバは「トークン無し = ひろくん」に寄せる移行期設計なので、
+    //   **絵梨さんにひろくんのデータが見えてしまう**。必ず再ログインさせる。
+    var SSA_TOKEN_SKEW_SEC = 120;   // これ以内に切れるものは「もう切れている」と見なす
+
+    function ssaTokenExp(token) {
+      try {
+        var p = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+        return Number(p.exp) || 0;
+      } catch (e) { return 0; }
+    }
+    function ssaTokenAlive(token) {
+      if (!token) return false;
+      var exp = ssaTokenExp(token);
+      return exp > 0 && (exp - SSA_TOKEN_SKEW_SEC) > Math.floor(Date.now() / 1000);
+    }
+    /** 期限切れ間近/切れなら Google に再発行を促す (セッションが生きていれば無言で通る)。 */
+    function ssaRenewSignIn() {
+      try {
+        if (window.google && window.google.accounts && window.google.accounts.id) {
+          google.accounts.id.prompt();
+          return true;
+        }
+      } catch (e) { console.warn('[ssa-auth] 再発行を促せなかった', e); }
+      return false;
+    }
+
     window.addEventListener('message', function (ev) {
       if (ev.origin !== SSA_WEBUI_ORIGIN) return;
       if (!ev.data || ev.data.type !== 'ssa-auth-request') return;
+      var tok = localStorage.getItem('ariel_auth_token') || '';
       try {
+        if (tok && !ssaTokenAlive(tok)) {
+          // 期限切れ: **渡さない**。WebUI 側は「再ログインが必要」を出す。
+          console.warn('[ssa-auth] トークンが期限切れ — 再ログインを促す');
+          ev.source.postMessage({ type: 'ssa-auth-expired' }, ev.origin);
+          ssaRenewSignIn();
+          return;
+        }
         ev.source.postMessage({
           type: 'ssa-auth',
-          token: localStorage.getItem('ariel_auth_token') || '',
+          token: tok,
           email: localStorage.getItem('ariel_email') || '',
         }, ev.origin);
       } catch (e) { console.warn('[ssa-auth] 渡せなかった', e); }
     });
+
+    /** 期限が来る前に前倒しで更新する (長く開いたまま使っても落ちないように)。 */
+    function ssaScheduleRenew() {
+      var tok = localStorage.getItem('ariel_auth_token') || '';
+      if (!tok) return;
+      var ms = (ssaTokenExp(tok) - 300) * 1000 - Date.now();   // 期限 5 分前
+      if (ms < 0) ms = 0;
+      setTimeout(function () {
+        loadGoogleSignInScript().then(function () {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse, auto_select: true,
+          });
+          ssaRenewSignIn();
+        }).catch(function () { /* 次のリロードで拾う */ });
+      }, ms);
+    }
 
     function ssaNotifyLogout() {
       try {
@@ -652,6 +708,18 @@
       localStorage.setItem('ariel_email', email);
       localStorage.setItem('ariel_auth_token', token);
 
+      // 開いたままの WebUI (iframe) に**新しいトークンを配る** — これが無いと
+      // 再発行しても iframe は古いトークンを握り続けて 401 のままになる。
+      try {
+        document.querySelectorAll('iframe').forEach(function (f) {
+          if (f.contentWindow) {
+            f.contentWindow.postMessage({ type: 'ssa-auth', token: token, email: email },
+                                        SSA_WEBUI_ORIGIN);
+          }
+        });
+      } catch (e) { /* 無視 */ }
+      ssaScheduleRenew();
+
       // メイン画面表示
       setTimeout(() => {
         showApp(email);
@@ -664,7 +732,9 @@
 
       google.accounts.id.initialize({
         client_id: GOOGLE_CLIENT_ID,
-        callback: handleCredentialResponse
+        callback: handleCredentialResponse,
+        // Google 側のセッションが生きていれば**無言で再発行**できる (期限切れの自動復帰用)
+        auto_select: true
       });
 
       google.accounts.id.renderButton(
@@ -709,9 +779,21 @@
       const token = localStorage.getItem('ariel_auth_token');
 
       // 認証済みかチェック
-      if (email && token) {
+      // 🔴 **トークンの有無だけで判定しない** — 期限切れだと「ログイン済みの画面なのに
+      //    WebUI の API が全部 401」になる (2026-08-16 絵梨さんが踏んだ)。
+      if (email && ssaTokenAlive(token)) {
         console.log('認証情報を検出: ', email);
         showApp(email);
+        ssaScheduleRenew();          // 期限 5 分前に前倒しで更新
+      } else if (email && token) {
+        console.warn('トークンが期限切れ — 再ログインが必要');
+        localStorage.removeItem('ariel_auth_token');
+        loadGoogleSignInScript()
+          .then(() => { initializeGoogleSignIn(); ssaRenewSignIn(); })
+          .catch((error) => {
+            console.error(error);
+            showError('セッションの期限が切れました。再度ログインしてください。');
+          });
       } else {
         loadGoogleSignInScript()
           .then(() => {
