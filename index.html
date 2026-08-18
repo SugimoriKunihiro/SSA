@@ -597,6 +597,82 @@
       var exp = ssaTokenExp(token);
       return exp > 0 && (exp - SSA_TOKEN_SKEW_SEC) > Math.floor(Date.now() / 1000);
     }
+    // === D-58 続き (2026-08-18): Portal 自身も **30 日のセッショントークン**を持つ ===
+    //
+    // ひろくん「まだ直ってないというか、頻繁に再ログインを求められるのがストレス」
+    //
+    // D-58 で `/api/auth/session` が 30 日トークンを出すようにしたが、**使っていたのは
+    // WebUI (iframe / 別 origin) だけ**で、この Portal の「ログイン済みか」の判定は
+    // `ariel_auth_token` (= Google の ID トークン / **寿命 1 時間**) を見ていた。
+    // ∴ API は通るのに **Portal がログイン画面を出す** = 体感は何も直っていない。
+    //
+    // 🔴 延命を One Tap (`google.accounts.id.prompt()`) に頼っていたのも効いていない —
+    //    FedCM / 3rd party cookie / 一度閉じると Google が一定期間抑制する ので
+    //    **黙って出ないことがある**。
+    // → Portal もログイン直後に 1 回だけ長寿命トークンに交換し、**それで門を通す**。
+    //   更新は**このトークン自身**で `/api/auth/session` を叩けるので Google が要らない
+    //   (サーバの `user_id_of()` が ssa セッションを検証して user を解決する)。
+    var SSA_SESSION_KEY = 'ssa_session_token';
+    var SSA_API_BASE = SSA_WEBUI_ORIGIN + '/api';
+    var SSA_RENEW_BEFORE_SEC = 3 * 24 * 3600;   // 期限 3 日前から更新を試みる
+
+    function ssaSession() {
+      try { return localStorage.getItem(SSA_SESSION_KEY) || ''; } catch (e) { return ''; }
+    }
+    function ssaSessionAlive() { return ssaTokenAlive(ssaSession()); }
+    function ssaSaveSession(t) {
+      try {
+        if (t) localStorage.setItem(SSA_SESSION_KEY, t);
+        else localStorage.removeItem(SSA_SESSION_KEY);
+      } catch (e) { /* 無視 */ }
+    }
+    /** いま API に出せる一番良いトークン (長寿命 > Google)。 */
+    function ssaBestToken() {
+      if (ssaSessionAlive()) return ssaSession();
+      var g = '';
+      try { g = localStorage.getItem('ariel_auth_token') || ''; } catch (e) { g = ''; }
+      return ssaTokenAlive(g) ? g : '';
+    }
+    /** bearer (Google or 旧セッション) で長寿命セッションを貰う。失敗しても画面は壊さない。 */
+    function ssaExchange(bearer) {
+      if (!bearer) return Promise.resolve('');
+      return fetch(SSA_API_BASE + '/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bearer }
+      }).then(function (r) {
+        if (!r.ok) { console.warn('[ssa-auth] セッション交換に失敗', r.status); return ''; }
+        return r.json();
+      }).then(function (d) {
+        if (d && d.token) {
+          ssaSaveSession(d.token);
+          console.log('[ssa-auth] セッション取得: 約',
+            Math.round((d.expires_in || 0) / 86400), '日有効 /', d.label || d.user_id || '');
+          // 開いたままの WebUI にも配る (iframe 側も長寿命に乗り換えられる)
+          try {
+            document.querySelectorAll('iframe').forEach(function (f) {
+              if (f.contentWindow) {
+                f.contentWindow.postMessage(
+                  { type: 'ssa-auth', token: d.token, email: localStorage.getItem('ariel_email') || '' },
+                  SSA_WEBUI_ORIGIN);
+              }
+            });
+          } catch (e) { /* 無視 */ }
+          return d.token;
+        }
+        return '';
+      }).catch(function (e) {
+        console.warn('[ssa-auth] セッション交換で例外', e);
+        return '';
+      });
+    }
+    /** 期限が近いセッションを**自分自身で**更新する (Google に触らない)。 */
+    function ssaRenewSessionIfNeeded() {
+      var t = ssaSession();
+      if (!t || !ssaTokenAlive(t)) return;
+      var left = ssaTokenExp(t) - Math.floor(Date.now() / 1000);
+      if (left < SSA_RENEW_BEFORE_SEC) ssaExchange(t);
+    }
+
     /** 期限切れ間近/切れなら Google に再発行を促す (セッションが生きていれば無言で通る)。 */
     function ssaRenewSignIn() {
       try {
@@ -611,7 +687,8 @@
     window.addEventListener('message', function (ev) {
       if (ev.origin !== SSA_WEBUI_ORIGIN) return;
       if (!ev.data || ev.data.type !== 'ssa-auth-request') return;
-      var tok = localStorage.getItem('ariel_auth_token') || '';
+      // D-58 続き: **長寿命セッションを優先して渡す** (Google の 1 時間に引きずられない)
+      var tok = ssaBestToken() || localStorage.getItem('ariel_auth_token') || '';
       try {
         if (tok && !ssaTokenAlive(tok)) {
           // 期限切れ: **渡さない**。WebUI 側は「再ログインが必要」を出す。
@@ -707,6 +784,9 @@
       // 認証情報を保存
       localStorage.setItem('ariel_email', email);
       localStorage.setItem('ariel_auth_token', token);
+      // 🔴 ここで**一度だけ** 30 日のセッションに交換する。これが無いと
+      //    Google の 1 時間でまた「ログインしてください」が出る (D-58 の本体)。
+      ssaExchange(token);
 
       // 開いたままの WebUI (iframe) に**新しいトークンを配る** — これが無いと
       // 再発行しても iframe は古いトークンを握り続けて 401 のままになる。
@@ -781,10 +861,19 @@
       // 認証済みかチェック
       // 🔴 **トークンの有無だけで判定しない** — 期限切れだと「ログイン済みの画面なのに
       //    WebUI の API が全部 401」になる (2026-08-16 絵梨さんが踏んだ)。
-      if (email && ssaTokenAlive(token)) {
-        console.log('認証情報を検出: ', email);
+      // 🔴 D-58 続き (2026-08-18): **30 日セッションが生きていれば Google は見ない**。
+      //    Google の ID トークンは 1 時間で切れるので、それを門にすると
+      //    「毎時ログイン画面」になる (ひろくん「頻繁に再ログインがストレス」)。
+      if (email && ssaSessionAlive()) {
+        var leftDays = Math.round((ssaTokenExp(ssaSession()) - Date.now() / 1000) / 86400);
+        console.log('認証情報を検出 (30 日セッション / 残り約', leftDays, '日): ', email);
         showApp(email);
-        ssaScheduleRenew();          // 期限 5 分前に前倒しで更新
+        ssaRenewSessionIfNeeded();   // 期限 3 日前になったら自分自身で更新
+      } else if (email && ssaTokenAlive(token)) {
+        console.log('認証情報を検出 (Google トークン): ', email);
+        showApp(email);
+        ssaExchange(token);          // ここで長寿命に乗り換える (次回からは上の分岐)
+        ssaScheduleRenew();          // 交換が失敗したときの保険 (従来の動き)
       } else if (email && token) {
         console.warn('トークンが期限切れ — 再ログインが必要');
         localStorage.removeItem('ariel_auth_token');
@@ -866,8 +955,10 @@
           ssaNotifyLogout();
 
           // ローカルストレージから認証情報を削除
+          // 🔴 **長寿命セッションも必ず消す** — 残すと「ログアウトしたのに入れる」になる
           localStorage.removeItem('ariel_auth_token');
           localStorage.removeItem('ariel_email');
+          localStorage.removeItem('ssa_session_token');
 
           // ページをリロード
           window.location.reload();
