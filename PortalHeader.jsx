@@ -45,7 +45,13 @@ function isEmbeddedInPortal() {
 // 🔴 ここに front 固有のコンポーネントを import しない — packages/portal は
 // WebUI と iOS front が共有する SSOT なので、**中身は呼び出し側 (App.jsx) が渡す**。
 // (2026-08-27 ひろくん指示「ダウンロードは灰色の SYLPHEED のヘッダーメニューの中」)
-export default function PortalHeader({ extra = null }) {
+//
+// `onLogout` = ログアウトボタンが呼ぶ後始末を呼び出し側から差し込む口 (任意)。
+// 🔴 ここでも front 固有のモジュール (cognitoAuth/portalAuth) は import しない —
+// 「4 系統の持ち物を全部消す」処理は App.jsx (front) 側が組み立てて渡す。
+// 渡されなければ従来どおり (ariel_* を消して reload するだけ)。
+// (2026-09-18 「ログアウトしても戻ってきてしまう」根治)
+export default function PortalHeader({ extra = null, onLogout = null }) {
   const [openKey, setOpenKey] = useState(null)
   const [collapseOpen, setCollapseOpen] = useState(false) // ハンバーガー展開状態
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < BREAKPOINT)
@@ -91,6 +97,13 @@ export default function PortalHeader({ extra = null }) {
       localStorage.removeItem('ariel_auth_token')
       localStorage.removeItem('ariel_email')
     } catch { /* noop */ }
+    // 🔴 呼び出し側 (App.jsx) が渡していれば、その口に完全な後始末を任せて終わる
+    // (呼び先が Cognito 等へ遷移するので reload はしない)。
+    // 渡されない経路 (Portal 経由 / iOS) は今までどおり reload。
+    if (onLogout) {
+      onLogout()
+      return
+    }
     window.location.reload()
   }
 
