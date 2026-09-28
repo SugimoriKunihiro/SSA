@@ -532,11 +532,11 @@
                🔴 スマホでは出さない — 落とすのは Windows 用の .ps1。
                🔴 ラベルは **必ず `{{ installerLabel }}` を通す** — ここに文字や絵文字を
                   直書きすると、状態 (⏳ / ✅ / ⚠️) が出なくなるのに
-                  `installerLabel === 'SSM'` の検査は緑のまま通ってしまう (2026-08-27 レイ指摘)。
+                  `installerLabel === 'SSAC'` の検査は緑のまま通ってしまう (2026-08-27 レイ指摘)。
                🔴 aria-label は**固定文**。ラベルが文字/絵文字で入れ替わるので、
-                  読み上げは短い 'SSM' や '⏳' ではなく用途を言わせる。 -->
+                  読み上げは短い 'SSAC' や '⏳' ではなく用途を言わせる。 -->
           <button v-if="installerVisible" class="action-btn" @click="downloadSsm3Installer"
-            aria-label="SSM3 (Beta) インストーラーをダウンロード" :aria-busy="installerBusy"
+            aria-label="SSAC と runclaude-ssm のインストーラーをダウンロード" :aria-busy="installerBusy"
             :title="installerTitle">{{ installerLabel }}</button>
           <button class="action-btn" @click="logout">ログアウト</button>
         </div>
@@ -632,12 +632,12 @@
     var SSA_RENEW_BEFORE_SEC = 3 * 24 * 3600;   // 期限 3 日前から更新を試みる
 
     // SSM3 (Beta) インストーラー配布 (SSM3-PLAN §12.1 / 追記5)
-    var SSM3_INSTALLER_FILE = 'runclaude-ssm-setup.ps1';
+    var SSM3_INSTALLER_FILE = 'ssac-setup.ps1';
     // 🔴 ラベルは **文字「SSM」**。ひろくん指示 2026-08-27
     // 「シノの識別子じゃなくて別のアイコンか文字に」 — 🛠️ は GNOME (シノ) の識別子なので、
     // 誰の識別子でもなく中身が分かる文字にした。忙しい/成功/失敗の一時表示は絵文字のまま。
-    var SSM3_INSTALLER_IDLE = 'SSM';
-    var SSM3_INSTALLER_TITLE = 'SSM3 (Beta) インストーラーをダウンロード — Windows PC 用。\n'
+    var SSM3_INSTALLER_IDLE = 'SSAC';   // 2026-09-28 ひろくん「ボタンのタイトルはSSMからSSACに」
+    var SSM3_INSTALLER_TITLE = 'SSAC + runclaude-ssm のインストーラーをダウンロード — Windows PC 用。\n'
       + 'PowerShell で: powershell -ExecutionPolicy Bypass -File .\\' + SSM3_INSTALLER_FILE;
 
     /**
