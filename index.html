@@ -676,12 +676,16 @@
       return ssaTokenAlive(g) ? g : '';
     }
     /** bearer (Google or 旧セッション) で長寿命セッションを貰う。失敗しても画面は壊さない。 */
+    //: 最後の交換の HTTP status (0 = 届かなかった)。401/403 = SSA の名簿に居ない (ログイン画面が見る)
+    var ssaLastExchangeStatus = 0;
     function ssaExchange(bearer) {
       if (!bearer) return Promise.resolve('');
+      ssaLastExchangeStatus = 0;
       return fetch(SSA_API_BASE + '/auth/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bearer }
       }).then(function (r) {
+        ssaLastExchangeStatus = r.status;
         if (!r.ok) { console.warn('[ssa-auth] セッション交換に失敗', r.status); return ''; }
         return r.json();
       }).then(function (d) {
@@ -806,29 +810,27 @@
       // ユーザーのメールアドレスを取得
       const email = payload.email;
 
-      // 許可するメールアドレスリスト
-      const allowedEmails = [
-        "sugimori@skyarch.net",
-        "k.sugimori.p@gmail.com",
-        "k.sugimori.cz@gmail.com",
-        // 2026-08-16 ひろくん依頼で追加
-        "mokona.isrle@gmail.com",
-        "mokona.1510@gmail.com"
-      ];
-      if (!allowedEmails.includes(email)) {
-        showError("このメールアドレスではログインできません。");
-        return;
-      }
-
-      // ローディング表示
+      // 🔴 2026-09-29: **誰が入れるかはサーバの名簿 (`ssa-users`) で決める**。
+      //   前はここに許可するメールアドレスを直書きしていて、名簿に足した柿並さんが
+      //   「このメールアドレスではログインできません」で弾かれた (名簿と画面の 2 か所に持っていた)。
+      //   サーバは名簿に居ない人を 403 で返すので、それを見て同じ文言を出す。
       showLoading();
+      // 🔴 ここで**一度だけ** 30 日のセッションに交換する。これが無いと
+      //    Google の 1 時間でまた「ログインしてください」が出る (D-58 の本体)。
+      ssaExchange(token).then(function () {
+        if (ssaLastExchangeStatus === 401 || ssaLastExchangeStatus === 403) {
+          ssaSaveSession('');
+          showError("このメールアドレスではログインできません。");
+          return;
+        }
+        ssaAfterLogin(token, email);
+      });
+    }
 
+    function ssaAfterLogin(token, email) {
       // 認証情報を保存
       localStorage.setItem('ariel_email', email);
       localStorage.setItem('ariel_auth_token', token);
-      // 🔴 ここで**一度だけ** 30 日のセッションに交換する。これが無いと
-      //    Google の 1 時間でまた「ログインしてください」が出る (D-58 の本体)。
-      ssaExchange(token);
 
       // 開いたままの WebUI (iframe) に**新しいトークンを配る** — これが無いと
       // 再発行しても iframe は古いトークンを握り続けて 401 のままになる。
