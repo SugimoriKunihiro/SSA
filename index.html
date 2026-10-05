@@ -523,7 +523,7 @@
         <!-- ユーザー情報とアクションボタン - ナビゲーションバー内に配置 -->
         <div class="user-info">
           <span class="user-email" id="user-email">{{ userEmail }}</span>
-          <!-- SSM3 (Beta) インストーラー配布 (SSM3-PLAN §12.1)。
+          <!-- SSM インストーラー配布 (SSM3-PLAN §12.1)。
                ひろくん指示 2026-08-27「ボタンは灰色の SYLPHEED のヘッダーメニューの中」= このバー。
                WebUI (iframe) 側の React にも同じボタンがあるが、Portal 経由では
                `isEmbeddedInPortal()` で React の灰色バーごと描かれないので**二重には出ない**。
@@ -535,7 +535,7 @@
                   `installerLabel === 'SSAC'` の検査は緑のまま通ってしまう (2026-08-27 レイ指摘)。
                🔴 aria-label は**固定文**。ラベルが文字/絵文字で入れ替わるので、
                   読み上げは短い 'SSAC' や '⏳' ではなく用途を言わせる。 -->
-          <button v-if="installerVisible" class="action-btn" @click="downloadSsm3Installer"
+          <button v-if="installerVisible" class="action-btn" @click="downloadSsmInstaller"
             aria-label="SSAC と runclaude-ssm のインストーラーをダウンロード" :aria-busy="installerBusy"
             :title="installerTitle">{{ installerLabel }}</button>
           <button class="action-btn" @click="logout">ログアウト</button>
@@ -631,14 +631,14 @@
     var SSA_API_BASE = SSA_WEBUI_ORIGIN + '/api';
     var SSA_RENEW_BEFORE_SEC = 3 * 24 * 3600;   // 期限 3 日前から更新を試みる
 
-    // SSM3 (Beta) インストーラー配布 (SSM3-PLAN §12.1 / 追記5)
-    var SSM3_INSTALLER_FILE = 'ssac-setup.ps1';
+    // SSM インストーラー配布 (SSM3-PLAN §12.1 / 追記5)
+    var SSM_INSTALLER_FILE = 'ssac-setup.ps1';
     // 🔴 ラベルは **文字「SSM」**。ひろくん指示 2026-08-27
     // 「シノの識別子じゃなくて別のアイコンか文字に」 — 🛠️ は GNOME (シノ) の識別子なので、
     // 誰の識別子でもなく中身が分かる文字にした。忙しい/成功/失敗の一時表示は絵文字のまま。
-    var SSM3_INSTALLER_IDLE = 'SSAC';   // 2026-09-28 ひろくん「ボタンのタイトルはSSMからSSACに」
-    var SSM3_INSTALLER_TITLE = 'SSAC + runclaude-ssm のインストーラーをダウンロード — Windows PC 用。\n'
-      + 'PowerShell で: powershell -ExecutionPolicy Bypass -File .\\' + SSM3_INSTALLER_FILE;
+    var SSM_INSTALLER_IDLE = 'SSAC';   // 2026-09-28 ひろくん「ボタンのタイトルはSSMからSSACに」
+    var SSM_INSTALLER_TITLE = 'SSAC + runclaude-ssm のインストーラーをダウンロード — Windows PC 用。\n'
+      + 'PowerShell で: powershell -ExecutionPolicy Bypass -File .\\' + SSM_INSTALLER_FILE;
 
     /**
      * スマホ・タブレットか (Windows 用の .ps1 を出す意味が無い環境)。
@@ -648,7 +648,7 @@
      * ので `/iPad/` に当たらない。∴ **タッチ可能な MacIntel** も同じ扱いにする
      * (実物の Mac は `maxTouchPoints === 0`)。
      */
-    function ssm3IsMobile() {
+    function ssmIsMobile() {
       try {
         var ua = navigator.userAgent || '';
         if (/iPhone|iPad|iPod|Android/i.test(ua)) return true;
@@ -961,11 +961,11 @@
         userEmail: '',
         currentView: 'chatkit',
         chatkitLoaded: true,
-        // SSM3 (Beta) インストーラー配布ボタン (mounted で UA を見て出す)
+        // SSM インストーラー配布ボタン (mounted で UA を見て出す)
         installerVisible: false,
         installerBusy: false,
-        installerLabel: SSM3_INSTALLER_IDLE,
-        installerTitle: SSM3_INSTALLER_TITLE
+        installerLabel: SSM_INSTALLER_IDLE,
+        installerTitle: SSM_INSTALLER_TITLE
       },
       mounted() {
         const email = localStorage.getItem('ariel_email');
@@ -973,11 +973,11 @@
         this.showContents = ["99999"];
         this.currentView = 'chatkit';
         this.chatkitLoaded = true;
-        // SSM3 (Beta) インストーラーのボタンは **Windows PC のブラウザだけ**に出す。
+        // SSM インストーラーのボタンは **Windows PC のブラウザだけ**に出す。
         // スマホには .ps1 の置き場所も実行手段も無いし、iOS WKWebView は
         // <a download> を無視して白紙を出す ([[reference_ios_webview_file_saving]])。
         try {
-          this.installerVisible = !ssm3IsMobile();
+          this.installerVisible = !ssmIsMobile();
         } catch (e) { this.installerVisible = false; }
         // nav-links.json をロード (Portal / iOS-Front で共有される SSOT)
         fetch('./nav-links.json', { cache: 'no-cache' })
@@ -1001,7 +1001,7 @@
           this.showContents = [data];
         },
         /**
-         * SSM3 (Beta) のインストーラー (runclaude-ssm-setup.ps1) を落とす。
+         * SSM のインストーラー (runclaude-ssm-setup.ps1) を落とす。
          *
          * 🔴 認証は `ssaBestToken()` (長寿命セッション > Google ID トークン) を
          *    Authorization に載せる。**<a href> で API を直接指すと乗らない** (D-55)。
@@ -1010,7 +1010,7 @@
          *    ([[feedback_expired_auth_must_fail_closed]])。
          * 既存の認証経路 (ssaExchange / logout) には一切触らない。
          */
-        downloadSsm3Installer() {
+        downloadSsmInstaller() {
           // 🔴 二重押しの排他は **ラベルではなく専用のフラグ**で持つ (2026-08-27 レイ指摘)。
           //    表示 ('⏳') を条件にすると、絵文字を変えた瞬間に排他が黙って消える。
           if (this.installerBusy) return;
@@ -1018,7 +1018,7 @@
           var token = ssaBestToken();
           if (!token) {
             self.installerLabel = '⚠️';
-            self.installerTitle = 'SSM3 インストーラー: ログインが切れています。'
+            self.installerTitle = 'SSM インストーラー: ログインが切れています。'
               + 'ページを再読み込みしてログインし直してください';
             setTimeout(function () { self.resetInstallerBtn(); }, 8000);
             return;
@@ -1027,7 +1027,7 @@
           self.installerLabel = '⏳';
           // 🔴 promise を **return する** — 呼び出し元 (テスト) が完了を待てるように。
           //    返さないと「押した後どうなったか」を検証できない。
-          return fetch(SSA_API_BASE + '/ssm3/installer', {
+          return fetch(SSA_API_BASE + '/ssm/installer', {
             headers: { 'Authorization': 'Bearer ' + token }
           }).then(function (r) {
             if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1041,7 +1041,7 @@
             try {
               var a = document.createElement('a');
               a.href = url;
-              a.download = SSM3_INSTALLER_FILE;
+              a.download = SSM_INSTALLER_FILE;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
@@ -1051,17 +1051,17 @@
             self.installerLabel = '✅';
             setTimeout(function () { self.resetInstallerBtn(); }, 4000);
           }).catch(function (e) {
-            console.warn('[ssm3] インストーラーの取得に失敗', e);
+            console.warn('[ssm] インストーラーの取得に失敗', e);
             self.installerLabel = '⚠️';
-            self.installerTitle = 'SSM3 インストーラー: ' + ((e && e.message) ? e.message : e);
+            self.installerTitle = 'SSM インストーラー: ' + ((e && e.message) ? e.message : e);
             setTimeout(function () { self.resetInstallerBtn(); }, 8000);
           }).then(function () {
             self.installerBusy = false;   // 成否どちらでも必ず解く
           });
         },
         resetInstallerBtn() {
-          this.installerLabel = SSM3_INSTALLER_IDLE;
-          this.installerTitle = SSM3_INSTALLER_TITLE;
+          this.installerLabel = SSM_INSTALLER_IDLE;
+          this.installerTitle = SSM_INSTALLER_TITLE;
         },
         logout() {
           // Google認証をサインアウト
