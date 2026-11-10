@@ -39,6 +39,13 @@
     }
 
     /* ホバーゾーンとナビゲーションバー */
+    /* SSAC の帯 (toolbar.html): SSAC 本体と同じく一番上 (28px)。SYLPHEED バーはその下 */
+    #ssac-toolbar-frame {
+      position: fixed; top: 0; left: 0; width: 100vw; height: 28px; border: 0; z-index: 102; display: none;
+    }
+    body.ssac-toolbar-on #ssac-toolbar-frame { display: block; }
+    body.ssac-toolbar-on #nav-hover-bar { top: 28px !important; }
+    body.ssac-toolbar-on .fullscreen-appsheet { top: 28px; height: calc(100dvh - 28px); }
     #nav-hover-bar {
       position: fixed !important;
       top: 0;
@@ -423,6 +430,7 @@
   </div>
 
   <!-- メインアプリ -->
+  <iframe id="ssac-toolbar-frame" title="SSAC toolbar" src="ssac-toolbar/toolbar.html"></iframe>
   <div id="app">
     <!-- ホバーゾーンとナビ - 参考コードのように単純化 -->
     <!-- <div id="nav-hover-zone" @mouseenter="showNav = true" @mouseleave="showNav = false"></div> -->
@@ -729,6 +737,31 @@
       } catch (e) { console.warn('[ssa-auth] 再発行を促せなかった', e); }
       return false;
     }
+
+    // === SSAC の帯 (ssac-toolbar/toolbar.html) と WebUI (iframe) の中継 (2026-11-10) ===
+    // 帯 (同じ origin) の toggle/getState を WebUI へ渡し、WebUI の状態を帯へ返す。
+    // 🔴 帯は WebUI が SSACC 版 (Cockpit を持つ) と名乗った時だけ出す (名乗らなければ今までどおり帯なし)
+    (function () {
+      var bar = function () { return document.getElementById('ssac-toolbar-frame'); };
+      var webui = function () {
+        var fs = document.querySelectorAll('.fullscreen-appsheet iframe');
+        return fs.length ? fs[0].contentWindow : null;
+      };
+      window.addEventListener('message', function (ev) {
+        var d = ev.data;
+        if (!d) return;
+        var b = bar();
+        if (d.src === 'ssacc-toolbar' && b && ev.source === b.contentWindow) {
+          var w = webui();
+          if (w) w.postMessage(d, SSA_WEBUI_ORIGIN);
+          return;
+        }
+        if (d.src === 'ssacc-parent' && ev.origin === SSA_WEBUI_ORIGIN) {
+          document.body.classList.add('ssac-toolbar-on');
+          if (b && b.contentWindow) b.contentWindow.postMessage(d, window.location.origin);
+        }
+      });
+    })();
 
     window.addEventListener('message', function (ev) {
       if (ev.origin !== SSA_WEBUI_ORIGIN) return;

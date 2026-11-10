@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<!-- renderer/index.html と同じ CSP 方針 (§21)。script は外部ファイルのみ、
+     inline style だけ許可する。 -->
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" />
+<title>SSAC</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    font-family: system-ui, sans-serif;
+    background: #14141a;
+    color: #ddd;
+    overflow: hidden;
+  }
+  /*
+   * 🔴 この html は BrowserWindow 本体の webContents に読み込まれ、常時
+   * ウィンドウ全体を占める（下は cockpit/ssa の WebContentsView が上に重なって
+   * 隠すだけ）。上端 TOOLBAR_HEIGHT (main.js と一致させる) だけが見える。
+   */
+  #bar {
+    /* 🔴 main.js の TOOLBAR_HEIGHT と一致させる (28) */
+    height: 28px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px;
+    border-bottom: 1px solid #333;
+    background: #1e1e26;
+    /* 🪟 #203 狭い窓でも 2 行に折れて 28px からはみ出さない (切替・更新の釦は縮めず、状態と更新文だけが省略される) */
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  /*
+   * 🔴 SSA を表示しているときは **SSA 自身のヘッダと同じ色** にして、
+   *   バーが 2 本に見えないようにする (2026-09-18)。
+   *   `#495057` は `packages/portal/PortalHeader.jsx` のヘッダ色。
+   *   ⚠️ front は 1 バイトも触らない方針なので、**こちらが寄せる**。
+   *   ⚠️ 色を変えるだけで高さは動かさない (寸法は main.js が持つ)。
+   */
+  body[data-face="ssa"] #bar {
+    background: #495057;
+    border-bottom-color: #495057;
+  }
+  body[data-face="ssa"] #switch-btn {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  #switch-btn {
+    padding: 2px 10px;
+    cursor: pointer;
+    border: 1px solid #556;
+    border-radius: 4px;
+    background: #2a2a34;
+    color: #ddd;
+    font-size: 12px;
+    flex: 0 0 auto;
+  }
+  #switch-btn:hover { background: #34506b; }
+  #status {
+    font-size: 12px;
+    color: #9cf;
+    /* 🪟 #203 余白が足りないときは三点リーダーで省略する */
+    flex: 1 1 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  #status.error { color: #f88; }
+  /* 🔄 更新の欄 (どちらのモードでも見える / 2026-09-24) */
+  /* 🪟 #203 更新の欄は幅の 60% まで。文は省略し、釦 (再起動して更新) は縮めない */
+  #update { margin-left: auto; display: flex; align-items: center; gap: 6px; font-size: 12px; flex: 0 1 auto; min-width: 0; max-width: 60%; overflow: hidden; }
+  #update[hidden] { display: none; }
+  #update-text { color: #ffd479; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #update-btn {
+    padding: 1px 8px; cursor: pointer; border: 0; border-radius: 4px;
+    background: #ffd479; color: #222; font-size: 12px; font-weight: 600;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  #update-btn:disabled { opacity: 0.6; cursor: default; }
+  /* 🔴 2026-10-11「更新でてこない」— 更新が見つかっていない間、押せば今すぐ確かめる版の欄 */
+  #update-idle {
+    margin-left: auto; padding: 1px 6px; cursor: pointer; border: 0; border-radius: 4px;
+    background: transparent; color: #9cf; font-size: 12px;
+    flex: 0 0 auto; white-space: nowrap;
+  }
+  #update-idle[hidden] { display: none; }
+  #update-idle:disabled { opacity: 0.6; cursor: default; }
+  #update-idle:hover:not(:disabled) { color: #cde; }
+</style>
+</head>
+<body>
+  <div id="bar">
+    <button id="switch-btn" type="button">CockPit ⇄ SSA</button>
+    <span id="status"></span>
+    <button id="update-idle" type="button" title="クリックで今すぐ確かめる">v…</button>
+    <span id="update" hidden>
+      <span id="update-text"></span>
+      <button id="update-btn" type="button">再起動して更新</button>
+    </span>
+  </div>
+  <script src="./toolbar-bridge.js"></script>
+  <script type="module" src="./toolbar-renderer.js"></script>
+</body>
+</html>
