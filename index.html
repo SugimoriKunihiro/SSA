@@ -46,6 +46,9 @@
     }
     body.ssac-toolbar-on #ssac-toolbar-frame { display: block; }
     body.ssac-toolbar-on #nav-hover-bar { top: 28px !important; }
+    /* Cockpit 面は SSAC 本体と同じく帯の下を面が全部使う: SYLPHEED バーは出さない (SSA 面の物) */
+    body.ssac-toolbar-on.ssac-cockpit #nav-hover-bar { display: none !important; }
+    body.ssac-toolbar-on.ssac-cockpit .fullscreen-appsheet { padding-top: 0; }
     body.ssac-toolbar-on .fullscreen-appsheet { top: 28px; height: calc(100dvh - 28px); }
     #nav-hover-bar {
       position: fixed !important;
@@ -759,6 +762,7 @@
         }
         if (d.src === 'ssacc-parent' && ev.origin === SSA_WEBUI_ORIGIN) {
           document.body.classList.add('ssac-toolbar-on');
+          if (d.kind === 'state' && d.payload) document.body.classList.toggle('ssac-cockpit', d.payload.active === 'cockpit');
           if (b && b.contentWindow) b.contentWindow.postMessage(d, window.location.origin);
         }
       });
